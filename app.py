@@ -227,29 +227,30 @@ CHUNK = 20_000
 def _download_buttons(count, filename_base, fetch_fn, label_color="#C9A84C"):
     """Render one download button per 20k-row chunk."""
     chunks = max(1, -(-count // CHUNK))  # ceiling division
-    if chunks == 1:
-        st.download_button(
-            label=f"⬇️  Download {count:,} Records as CSV",
-            data=fetch_fn(0, count),
-            file_name=f"{filename_base}.csv",
-            mime="text/csv",
-            use_container_width=True,
-        )
-    else:
-        cols = st.columns(min(chunks, 3))
-        for i in range(chunks):
-            offset    = i * CHUNK
-            end       = min(offset + CHUNK, count)
-            col_idx   = i % 3
-            with cols[col_idx]:
-                st.download_button(
-                    label=f"⬇️  Rows {offset+1:,}–{end:,}",
-                    data=fetch_fn(offset, CHUNK),
-                    file_name=f"{filename_base}_part{i+1}.csv",
-                    mime="text/csv",
-                    use_container_width=True,
-                    key=f"dl_{filename_base}_{i}",
-                )
+    with st.spinner("Preparing download..."):
+        if chunks == 1:
+            st.download_button(
+                label=f"⬇️  Download {count:,} Records as CSV",
+                data=fetch_fn(0, count),
+                file_name=f"{filename_base}.csv",
+                mime="text/csv",
+                use_container_width=True,
+            )
+        else:
+            cols = st.columns(min(chunks, 3))
+            for i in range(chunks):
+                offset  = i * CHUNK
+                end     = min(offset + CHUNK, count)
+                col_idx = i % 3
+                with cols[col_idx]:
+                    st.download_button(
+                        label=f"⬇️  Rows {offset+1:,}–{end:,}",
+                        data=fetch_fn(offset, CHUNK),
+                        file_name=f"{filename_base}_part{i+1}.csv",
+                        mime="text/csv",
+                        use_container_width=True,
+                        key=f"dl_{filename_base}_{i}",
+                    )
 
 
 # ── Header ─────────────────────────────────────────────────────────────────────
