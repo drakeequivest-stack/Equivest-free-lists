@@ -225,22 +225,36 @@ user_email = user["email"]
 
 CHUNK = 20_000
 
+def _split_csv(data: bytes, chunk_size: int) -> list[bytes]:
+    """Split CSV bytes into chunks of chunk_size rows, preserving the header in each."""
+    lines = data.splitlines(keepends=True)
+    if len(lines) <= 1:
+        return [data]
+    header = lines[0]
+    rows   = lines[1:]
+    chunks = []
+    for i in range(0, len(rows), chunk_size):
+        chunk = header + b"".join(rows[i:i + chunk_size])
+        chunks.append(chunk)
+    return chunks if chunks else [data]
+
+
 def _download_buttons(count, filename_base, fetch_fn, label_color="#C9A84C"):
-    """Upload CSV chunks to Supabase Storage and show direct download links."""
-    chunks = max(1, -(-count // CHUNK))  # ceiling division
+    """Fetch full CSV once, split into chunks, upload to Storage, show links."""
     cache_key = f"csv_urls_{filename_base}"
 
     if cache_key not in st.session_state:
         if st.button("⬇️  Prepare Download", use_container_width=True, key=f"prep_{filename_base}"):
-            with st.spinner("Uploading to download server..."):
+            with st.spinner("Preparing download..."):
+                full_data = fetch_fn(0, 500_000)
+                parts     = _split_csv(full_data, CHUNK)
                 urls = []
-                for i in range(chunks):
-                    offset = i * CHUNK
-                    end    = min(offset + CHUNK, count)
-                    fname  = f"{filename_base}_part{i+1}.csv" if chunks > 1 else f"{filename_base}.csv"
-                    data   = fetch_fn(offset, CHUNK if chunks > 1 else count)
-                    url    = database.upload_csv(data, fname)
-                    urls.append((url, fname, offset + 1, end))
+                for i, part in enumerate(parts):
+                    fname = f"{filename_base}_part{i+1}.csv" if len(parts) > 1 else f"{filename_base}.csv"
+                    start = i * CHUNK + 1
+                    end   = min((i + 1) * CHUNK, count)
+                    url   = database.upload_csv(part, fname)
+                    urls.append((url, fname, start, end))
                 st.session_state[cache_key] = urls
                 st.rerun()
         return
@@ -249,7 +263,7 @@ def _download_buttons(count, filename_base, fetch_fn, label_color="#C9A84C"):
     if len(urls) == 1:
         url, fname, _, _ = urls[0]
         st.markdown(
-            f'<a href="{url}" target="_blank" download="{fname}" '
+            f'<a href="{url}" target="_blank" '
             f'style="display:block;width:100%;text-align:center;padding:0.65rem 1.5rem;'
             f'background:linear-gradient(135deg,#C9A84C,#E8D070);color:#080a14;'
             f'font-family:Outfit,sans-serif;font-weight:800;font-size:0.95rem;'
@@ -262,7 +276,7 @@ def _download_buttons(count, filename_base, fetch_fn, label_color="#C9A84C"):
         for i, (url, fname, start, end) in enumerate(urls):
             with cols[i % 3]:
                 st.markdown(
-                    f'<a href="{url}" target="_blank" download="{fname}" '
+                    f'<a href="{url}" target="_blank" '
                     f'style="display:block;width:100%;text-align:center;padding:0.65rem 0.5rem;'
                     f'background:linear-gradient(135deg,#C9A84C,#E8D070);color:#080a14;'
                     f'font-family:Outfit,sans-serif;font-weight:800;font-size:0.85rem;'
