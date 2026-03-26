@@ -12,7 +12,7 @@ def _admin() -> Client:
 def _anon() -> Client:
     return create_client(st.secrets["SUPABASE_URL"], st.secrets["SUPABASE_ANON_KEY"])
 
-CSV_BUCKET = "csv-exports"
+CSV_BUCKET = "css-exports"
 
 def upload_csv(data: bytes, filename: str) -> str:
     """Upload CSV to Supabase Storage and return public URL. Overwrites if exists."""
