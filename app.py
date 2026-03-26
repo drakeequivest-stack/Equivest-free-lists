@@ -7,17 +7,6 @@ from config import MARKETS, CLAIM_HOURS
 from datetime import datetime, timezone
 import base64, json
 
-def _csv_link(data: bytes, filename: str, label: str) -> str:
-    """Return an HTML anchor tag that downloads data as a CSV file."""
-    b64 = base64.b64encode(data).decode()
-    return (
-        f'<a href="data:text/csv;base64,{b64}" download="{filename}" '
-        f'style="display:block;width:100%;text-align:center;padding:0.6rem 1.5rem;'
-        f'background:linear-gradient(135deg,#C9A84C,#E8D070);color:#080a14;'
-        f'font-family:Outfit,sans-serif;font-weight:800;font-size:0.95rem;'
-        f'border-radius:10px;text-decoration:none;box-sizing:border-box">'
-        f'{label}</a>'
-    )
 
 def _save_session(user: dict):
     token = base64.urlsafe_b64encode(
@@ -237,25 +226,30 @@ user_email = user["email"]
 CHUNK = 20_000
 
 def _download_buttons(count, filename_base, fetch_fn, label_color="#C9A84C"):
-    """Render one download link per 20k-row chunk."""
+    """Render one download button per 20k-row chunk."""
     chunks = max(1, -(-count // CHUNK))  # ceiling division
     with st.spinner("Preparing download..."):
         if chunks == 1:
-            data = fetch_fn(0, count)
-            st.markdown(
-                _csv_link(data, f"{filename_base}.csv", f"⬇️  Download {count:,} Records as CSV"),
-                unsafe_allow_html=True,
+            st.download_button(
+                label=f"⬇️  Download {count:,} Records as CSV",
+                data=fetch_fn(0, count),
+                file_name=f"{filename_base}.csv",
+                mime="application/octet-stream",
+                use_container_width=True,
             )
         else:
             cols = st.columns(min(chunks, 3))
             for i in range(chunks):
                 offset  = i * CHUNK
                 end     = min(offset + CHUNK, count)
-                data    = fetch_fn(offset, CHUNK)
                 with cols[i % 3]:
-                    st.markdown(
-                        _csv_link(data, f"{filename_base}_part{i+1}.csv", f"⬇️  Rows {offset+1:,}–{end:,}"),
-                        unsafe_allow_html=True,
+                    st.download_button(
+                        label=f"⬇️  Rows {offset+1:,}–{end:,}",
+                        data=fetch_fn(offset, CHUNK),
+                        file_name=f"{filename_base}_part{i+1}.csv",
+                        mime="application/octet-stream",
+                        use_container_width=True,
+                        key=f"dl_{filename_base}_{i}",
                     )
 
 
