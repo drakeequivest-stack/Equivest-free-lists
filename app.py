@@ -344,7 +344,7 @@ if st.session_state["list_type"] == "fsbo":
             label=f"⬇️  Download {fsbo_count:,} FSBO Leads as CSV",
             data=fsbo_csv,
             file_name=f"fsbo_leads_{state}_{datetime.now().strftime('%Y%m%d')}.csv",
-            mime="application/octet-stream",
+            mime="text/csv",
             use_container_width=True,
         )
 
@@ -413,7 +413,7 @@ elif st.session_state["list_type"] == "td":
                 label=f"⬇️  Download {td_count_n:,} Records as CSV",
                 data=database.get_td_leads_for_download(state, td_county),
                 file_name=f"tax_delinquent_{state}_{td_county}_{datetime.now().strftime('%Y%m%d')}.csv",
-                mime="application/octet-stream",
+                mime="text/csv",
                 use_container_width=True,
             )
 
@@ -478,7 +478,7 @@ elif st.session_state["list_type"] == "ao":
                 label=f"⬇️  Download {ao_count_n:,} Records as CSV",
                 data=database.get_ao_leads_for_download(state, ao_county),
                 file_name=f"absentee_owners_{state}_{ao_county}_{datetime.now().strftime('%Y%m%d')}.csv",
-                mime="application/octet-stream",
+                mime="text/csv",
                 use_container_width=True,
             )
 
@@ -542,7 +542,7 @@ elif st.session_state["list_type"] == "cv":
                 label=f"⬇️  Download {cv_count_n:,} Records as CSV",
                 data=database.get_cv_leads_for_download(state, cv_city),
                 file_name=f"code_violations_{state}_{cv_city.replace(' ','_')}_{datetime.now().strftime('%Y%m%d')}.csv",
-                mime="application/octet-stream",
+                mime="text/csv",
                 use_container_width=True,
             )
 
