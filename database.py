@@ -16,7 +16,8 @@ def _anon() -> Client:
 def _fetch_csv_export(table: str, select: str,
                       filters: list[tuple[str, str]],
                       order: str,
-                      limit: int = 500_000) -> bytes:
+                      limit: int = 500_000,
+                      offset: int = 0) -> bytes:
     """
     Direct PostgREST CSV export — single HTTP request, bypasses SDK's 1k-row cap.
     Returns raw CSV bytes ready for st.download_button.
@@ -39,6 +40,7 @@ def _fetch_csv_export(table: str, select: str,
         ("select", select),
         ("order",  order),
         ("limit",  str(limit)),
+        ("offset", str(offset)),
     ]
     params.extend(filters)
     try:
@@ -104,8 +106,8 @@ def get_fsbo_count(state: str) -> int:
     except Exception:
         return 0
 
-def get_fsbo_leads_for_download(state: str) -> bytes:
-    """CSV bytes — all active FSBO leads for state."""
+def get_fsbo_leads_for_download(state: str, limit: int = 500_000, offset: int = 0) -> bytes:
+    """CSV bytes — active FSBO leads for state, with optional chunking."""
     now = datetime.now(timezone.utc).isoformat()
     return _fetch_csv_export(
         "fsbo_leads",
@@ -115,6 +117,8 @@ def get_fsbo_leads_for_download(state: str) -> bytes:
             ("expires_at", f"gt.{now}"),
         ],
         "posted_at.desc",
+        limit=limit,
+        offset=offset,
     )
 
 def upsert_leads(leads: list[dict]) -> int:
@@ -296,8 +300,8 @@ def get_td_counties(state: str) -> list[str]:
 def get_td_county_count(state: str, county: str) -> int:
     return _count_by("tax_delinquent_leads", state=state, county=county)
 
-def get_td_leads_for_download(state: str, county: str) -> bytes:
-    """CSV bytes — all TD records for state/county, owner_name + property_address required."""
+def get_td_leads_for_download(state: str, county: str, limit: int = 500_000, offset: int = 0) -> bytes:
+    """CSV bytes — TD records for state/county with optional chunking."""
     return _fetch_csv_export(
         "tax_delinquent_leads",
         "owner_name,property_address,county,state,parcel_id,amount_owed,assessed_value,tax_year",
@@ -308,6 +312,8 @@ def get_td_leads_for_download(state: str, county: str) -> bytes:
             ("property_address", "neq."),
         ],
         "amount_owed.desc",
+        limit=limit,
+        offset=offset,
     )
 
 def claim_td_lead(lead_id: str, user_id: str, user_email: str, hours: int = 48) -> tuple[bool, str]:
@@ -394,8 +400,8 @@ def get_ao_counties(state: str) -> list[str]:
 def get_ao_county_count(state: str, county: str) -> int:
     return _count_by("absentee_owner_leads", state=state, county=county)
 
-def get_ao_leads_for_download(state: str, county: str) -> bytes:
-    """CSV bytes — all AO records for state/county, owner + property address required."""
+def get_ao_leads_for_download(state: str, county: str, limit: int = 500_000, offset: int = 0) -> bytes:
+    """CSV bytes — AO records for state/county with optional chunking."""
     return _fetch_csv_export(
         "absentee_owner_leads",
         "owner_name,owner_address,property_address,county,state,parcel_id,amount_owed,source_url",
@@ -406,6 +412,8 @@ def get_ao_leads_for_download(state: str, county: str) -> bytes:
             ("property_address", "neq."),
         ],
         "scraped_at.desc",
+        limit=limit,
+        offset=offset,
     )
 
 
@@ -447,8 +455,8 @@ def get_cv_cities(state: str) -> list[str]:
 def get_cv_city_count(state: str, city: str) -> int:
     return _count_by("code_violation_leads", state=state, city=city)
 
-def get_cv_leads_for_download(state: str, city: str) -> bytes:
-    """CSV bytes — all CV records for state/city, address required."""
+def get_cv_leads_for_download(state: str, city: str, limit: int = 500_000, offset: int = 0) -> bytes:
+    """CSV bytes — CV records for state/city with optional chunking."""
     return _fetch_csv_export(
         "code_violation_leads",
         "address,city,state,parcel_id,violation_type,violation_sub,case_status,filed_date,last_insp_date,source_url",
@@ -458,6 +466,8 @@ def get_cv_leads_for_download(state: str, city: str) -> bytes:
             ("address", "neq."),
         ],
         "filed_date.desc",
+        limit=limit,
+        offset=offset,
     )
 
 

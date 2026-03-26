@@ -212,6 +212,35 @@ if not show_auth():
 user       = st.session_state["user"]
 user_email = user["email"]
 
+CHUNK = 20_000
+
+def _download_buttons(count, filename_base, fetch_fn, label_color="#C9A84C"):
+    """Render one download button per 20k-row chunk."""
+    chunks = max(1, -(-count // CHUNK))  # ceiling division
+    if chunks == 1:
+        st.download_button(
+            label=f"⬇️  Download {count:,} Records as CSV",
+            data=fetch_fn(0, count),
+            file_name=f"{filename_base}.csv",
+            mime="text/csv",
+            use_container_width=True,
+        )
+    else:
+        cols = st.columns(min(chunks, 3))
+        for i in range(chunks):
+            offset    = i * CHUNK
+            end       = min(offset + CHUNK, count)
+            col_idx   = i % 3
+            with cols[col_idx]:
+                st.download_button(
+                    label=f"⬇️  Rows {offset+1:,}–{end:,}",
+                    data=fetch_fn(offset, CHUNK),
+                    file_name=f"{filename_base}_part{i+1}.csv",
+                    mime="text/csv",
+                    use_container_width=True,
+                    key=f"dl_{filename_base}_{i}",
+                )
+
 
 # ── Header ─────────────────────────────────────────────────────────────────────
 col_h, col_out = st.columns([5, 1])
@@ -339,13 +368,10 @@ if st.session_state["list_type"] == "fsbo":
             f"On Mac: right-click → Open With → Excel or Google Sheets to avoid Numbers.</p>",
             unsafe_allow_html=True
         )
-        fsbo_csv = database.get_fsbo_leads_for_download(state)
-        st.download_button(
-            label=f"⬇️  Download {fsbo_count:,} FSBO Leads as CSV",
-            data=fsbo_csv,
-            file_name=f"fsbo_leads_{state}_{datetime.now().strftime('%Y%m%d')}.csv",
-            mime="text/csv",
-            use_container_width=True,
+        _download_buttons(
+            fsbo_count,
+            f"fsbo_leads_{state}_{datetime.now().strftime('%Y%m%d')}",
+            lambda off, lim: database.get_fsbo_leads_for_download(state, limit=lim, offset=off),
         )
 
     st.markdown("<p style='text-align:center;font-size:0.82rem;color:rgba(242,239,230,0.18);margin-top:2rem'>"
@@ -409,12 +435,10 @@ elif st.session_state["list_type"] == "td":
             unsafe_allow_html=True
         )
         if td_count_n:
-            st.download_button(
-                label=f"⬇️  Download {td_count_n:,} Records as CSV",
-                data=database.get_td_leads_for_download(state, td_county),
-                file_name=f"tax_delinquent_{state}_{td_county}_{datetime.now().strftime('%Y%m%d')}.csv",
-                mime="text/csv",
-                use_container_width=True,
+            _download_buttons(
+                td_count_n,
+                f"tax_delinquent_{state}_{td_county}_{datetime.now().strftime('%Y%m%d')}",
+                lambda off, lim: database.get_td_leads_for_download(state, td_county, limit=lim, offset=off),
             )
 
 
@@ -474,12 +498,10 @@ elif st.session_state["list_type"] == "ao":
             unsafe_allow_html=True
         )
         if ao_count_n:
-            st.download_button(
-                label=f"⬇️  Download {ao_count_n:,} Records as CSV",
-                data=database.get_ao_leads_for_download(state, ao_county),
-                file_name=f"absentee_owners_{state}_{ao_county}_{datetime.now().strftime('%Y%m%d')}.csv",
-                mime="text/csv",
-                use_container_width=True,
+            _download_buttons(
+                ao_count_n,
+                f"absentee_owners_{state}_{ao_county}_{datetime.now().strftime('%Y%m%d')}",
+                lambda off, lim: database.get_ao_leads_for_download(state, ao_county, limit=lim, offset=off),
             )
 
 
@@ -538,12 +560,10 @@ elif st.session_state["list_type"] == "cv":
             unsafe_allow_html=True
         )
         if cv_count_n:
-            st.download_button(
-                label=f"⬇️  Download {cv_count_n:,} Records as CSV",
-                data=database.get_cv_leads_for_download(state, cv_city),
-                file_name=f"code_violations_{state}_{cv_city.replace(' ','_')}_{datetime.now().strftime('%Y%m%d')}.csv",
-                mime="text/csv",
-                use_container_width=True,
+            _download_buttons(
+                cv_count_n,
+                f"code_violations_{state}_{cv_city.replace(' ','_')}_{datetime.now().strftime('%Y%m%d')}",
+                lambda off, lim: database.get_cv_leads_for_download(state, cv_city, limit=lim, offset=off),
             )
 
 
