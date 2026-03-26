@@ -88,6 +88,16 @@ html, body, .stApp {
 .card-teal .list-card-count { color:#14B8A6; }
 .card-soon { opacity:0.62; }
 
+/* Coming soon chips */
+.soon-chip {
+  font-size:0.72rem; font-weight:700; padding:4px 12px; border-radius:20px;
+  border:1px solid; opacity:0.45;
+}
+.soon-chip.card-orange { border-color:#E07D35; color:#E07D35; background:rgba(230,130,50,0.07); }
+.soon-chip.card-purple { border-color:#8B5CF6; color:#8B5CF6; background:rgba(139,92,246,0.07); }
+.soon-chip.card-green  { border-color:#10B981; color:#10B981; background:rgba(16,185,129,0.07); }
+.soon-chip.card-gold   { border-color:#C9A84C; color:#C9A84C; background:rgba(201,168,76,0.07); }
+
 /* Lead cards */
 .lead-card { background:#0f1120; border:2px solid rgba(201,168,76,0.2);
   border-radius:14px; padding:1.4rem 1.6rem; margin-bottom:1rem;
@@ -273,21 +283,27 @@ ao_count   = database.get_ao_lead_count(state)
 cv_count   = database.get_cv_lead_count(state)
 
 # ── List type cards ────────────────────────────────────────────────────────────
-LIST_TYPES = [
-    ("fsbo", "🏠", "FSBO",            fsbo_count, f"{fsbo_count:,} leads",  "card-gold",   fsbo_count > 0),
-    ("td",   "📋", "Tax Delinquent",  td_count,   f"{td_count:,} total",    "card-red",    td_count > 0),
-    (None,   "🏚️", "Pre-Foreclosure", None,       "Coming Soon",            "card-orange", False),
-    (None,   "⚖️", "Divorce",         None,       "Coming Soon",            "card-purple", False),
-    ("ao",   "🏢", "Absentee Owner",  ao_count,   f"{ao_count:,} total",    "card-blue",   ao_count > 0),
-    (None,   "💰", "Free & Clear",    None,       "Coming Soon",            "card-green",  False),
-    ("cv",   "🚨", "Code Violations", cv_count,   f"{cv_count:,} total",    "card-teal",   cv_count > 0),
+ACTIVE_TYPES = [
+    ("fsbo", "🏠", "FSBO",            fsbo_count, f"{fsbo_count:,} leads", "card-gold"),
+    ("td",   "📋", "Tax Delinquent",  td_count,   f"{td_count:,} total",   "card-red"),
+    ("ao",   "🏢", "Absentee Owner",  ao_count,   f"{ao_count:,} total",   "card-blue"),
+    ("cv",   "🚨", "Code Violations", cv_count,   f"{cv_count:,} total",   "card-teal"),
 ]
 
-card_cols = st.columns(len(LIST_TYPES))
-for i, (lt_key, icon, name, count, sub, color, active) in enumerate(LIST_TYPES):
+COMING_SOON = [
+    ("🏚️", "Pre-Foreclosure", "card-orange"),
+    ("⚖️",  "Divorce",         "card-purple"),
+    ("💰", "Free & Clear",    "card-green"),
+    ("📬", "Probate",         "card-gold"),
+]
+
+# Active cards
+card_cols = st.columns(len(ACTIVE_TYPES))
+for i, (lt_key, icon, name, count, sub, color) in enumerate(ACTIVE_TYPES):
+    active = count > 0
     with card_cols[i]:
         soon_class = "" if active else " card-soon"
-        count_html = f'<div class="list-card-count">{count:,}</div>' if (active and count) else ""
+        count_html = f'<div class="list-card-count">{count:,}</div>' if active else ""
         st.markdown(f"""
         <div class="list-card {color}{soon_class}">
           <div class="list-card-icon">{icon}</div>
@@ -295,10 +311,23 @@ for i, (lt_key, icon, name, count, sub, color, active) in enumerate(LIST_TYPES):
           {count_html}
           <div class="list-card-sub">{sub}</div>
         </div>""", unsafe_allow_html=True)
-        if active and lt_key:
+        if active:
             if st.button("View", key=f"lt_{lt_key}", use_container_width=True):
                 st.session_state["list_type"] = lt_key
                 st.rerun()
+
+# Coming soon row
+st.markdown("<div style='margin-top:1rem'></div>", unsafe_allow_html=True)
+soon_html = "".join(
+    f'<div class="soon-chip {color}">{icon} {name}</div>'
+    for icon, name, color in COMING_SOON
+)
+st.markdown(f"""
+<div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap">
+  <span style="font-size:0.7rem;font-weight:700;letter-spacing:0.15em;text-transform:uppercase;
+    color:rgba(242,239,230,0.25)">Coming Soon</span>
+  {soon_html}
+</div>""", unsafe_allow_html=True)
 
 st.markdown("""
 <div class="rules-box" style="margin-top:1.5rem">
