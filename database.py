@@ -12,6 +12,22 @@ def _admin() -> Client:
 def _anon() -> Client:
     return create_client(st.secrets["SUPABASE_URL"], st.secrets["SUPABASE_ANON_KEY"])
 
+CSV_BUCKET = "csv-exports"
+
+def upload_csv(data: bytes, filename: str) -> str:
+    """Upload CSV to Supabase Storage and return public URL. Overwrites if exists."""
+    try:
+        sb = _admin()
+        path = f"exports/{filename}"
+        sb.storage.from_(CSV_BUCKET).upload(
+            path, data,
+            file_options={"content-type": "text/csv", "upsert": "true"},
+        )
+        return sb.storage.from_(CSV_BUCKET).get_public_url(path)
+    except Exception as e:
+        print(f"[DB] upload_csv error: {e}")
+        return ""
+
 
 def _fetch_csv_export(table: str, select: str,
                       filters: list[tuple[str, str]],

@@ -226,31 +226,50 @@ user_email = user["email"]
 CHUNK = 20_000
 
 def _download_buttons(count, filename_base, fetch_fn, label_color="#C9A84C"):
-    """Render one download button per 20k-row chunk."""
+    """Upload CSV chunks to Supabase Storage and show direct download links."""
     chunks = max(1, -(-count // CHUNK))  # ceiling division
-    with st.spinner("Preparing download..."):
-        if chunks == 1:
-            st.download_button(
-                label=f"⬇️  Download {count:,} Records as CSV",
-                data=fetch_fn(0, count),
-                file_name=f"{filename_base}.csv",
-                mime="application/octet-stream",
-                use_container_width=True,
-            )
-        else:
-            cols = st.columns(min(chunks, 3))
-            for i in range(chunks):
-                offset  = i * CHUNK
-                end     = min(offset + CHUNK, count)
-                with cols[i % 3]:
-                    st.download_button(
-                        label=f"⬇️  Rows {offset+1:,}–{end:,}",
-                        data=fetch_fn(offset, CHUNK),
-                        file_name=f"{filename_base}_part{i+1}.csv",
-                        mime="application/octet-stream",
-                        use_container_width=True,
-                        key=f"dl_{filename_base}_{i}",
-                    )
+    cache_key = f"csv_urls_{filename_base}"
+
+    if cache_key not in st.session_state:
+        if st.button("⬇️  Prepare Download", use_container_width=True, key=f"prep_{filename_base}"):
+            with st.spinner("Uploading to download server..."):
+                urls = []
+                for i in range(chunks):
+                    offset = i * CHUNK
+                    end    = min(offset + CHUNK, count)
+                    fname  = f"{filename_base}_part{i+1}.csv" if chunks > 1 else f"{filename_base}.csv"
+                    data   = fetch_fn(offset, CHUNK if chunks > 1 else count)
+                    url    = database.upload_csv(data, fname)
+                    urls.append((url, fname, offset + 1, end))
+                st.session_state[cache_key] = urls
+                st.rerun()
+        return
+
+    urls = st.session_state[cache_key]
+    if len(urls) == 1:
+        url, fname, _, _ = urls[0]
+        st.markdown(
+            f'<a href="{url}" target="_blank" download="{fname}" '
+            f'style="display:block;width:100%;text-align:center;padding:0.65rem 1.5rem;'
+            f'background:linear-gradient(135deg,#C9A84C,#E8D070);color:#080a14;'
+            f'font-family:Outfit,sans-serif;font-weight:800;font-size:0.95rem;'
+            f'border-radius:10px;text-decoration:none;box-sizing:border-box">'
+            f'⬇️  Download {count:,} Records as CSV</a>',
+            unsafe_allow_html=True,
+        )
+    else:
+        cols = st.columns(min(len(urls), 3))
+        for i, (url, fname, start, end) in enumerate(urls):
+            with cols[i % 3]:
+                st.markdown(
+                    f'<a href="{url}" target="_blank" download="{fname}" '
+                    f'style="display:block;width:100%;text-align:center;padding:0.65rem 0.5rem;'
+                    f'background:linear-gradient(135deg,#C9A84C,#E8D070);color:#080a14;'
+                    f'font-family:Outfit,sans-serif;font-weight:800;font-size:0.85rem;'
+                    f'border-radius:10px;text-decoration:none;box-sizing:border-box">'
+                    f'⬇️  Rows {start:,}–{end:,}</a>',
+                    unsafe_allow_html=True,
+                )
 
 
 # ── Header ─────────────────────────────────────────────────────────────────────
