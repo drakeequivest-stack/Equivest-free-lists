@@ -1,0 +1,50 @@
+name: Monthly List Refresh
+
+on:
+  schedule:
+    # Runs at 6:00 AM UTC on the 1st of every month (1:00 AM CST / 2:00 AM EST)
+    - cron: '0 6 1 * *'
+  workflow_dispatch:
+    # Allows you to manually trigger a run from GitHub anytime
+
+jobs:
+  scrape:
+    name: Clear & Re-scrape All Lists
+    runs-on: ubuntu-latest
+    timeout-minutes: 180  # 3 hour max
+
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+      SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Clear existing AO / TD / CV data
+        run: python3 clear_data.py
+
+      - name: Scrape Absentee Owner lists
+        run: python3 absentee_scraper.py
+
+      - name: Scrape Tax Delinquent lists
+        run: python3 tax_scraper.py
+
+      - name: Scrape Code Violation lists
+        run: python3 codevio_scraper.py
+
+      - name: Scrape FSBO listings
+        run: python3 scraper.py
+
+      - name: Done
+        run: echo "Monthly refresh complete — $(date)"
