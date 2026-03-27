@@ -225,14 +225,32 @@ user_email = user["email"]
 
 CHUNK_SIZE = 10_000
 
+def _last_id(data: bytes) -> int:
+    """Extract the integer id from the first column of the last CSV row."""
+    lines = [l for l in data.splitlines() if l.strip()]
+    if len(lines) < 2:
+        return 0
+    try:
+        return int(lines[-1].split(b",")[0])
+    except (ValueError, IndexError):
+        return 0
+
+def _strip_id_col(data: bytes) -> bytes:
+    """Remove the leading id column from every CSV row."""
+    out = []
+    for line in data.splitlines(keepends=True):
+        idx = line.find(b",")
+        out.append(line[idx + 1:] if idx != -1 else line)
+    return b"".join(out)
+
 def _download_buttons(count, filename_base, fetch_fn):
+    """fetch_fn(after_id, limit) -> bytes  (id is first column)"""
     if not count:
         return
     num_chunks = max(1, (count + CHUNK_SIZE - 1) // CHUNK_SIZE)
-    sk = f"dl__{filename_base}"  # session_state key prefix
+    sk = f"dl__{filename_base}"
 
     if num_chunks == 1:
-        # Small list — single fetch-then-download flow
         ck = f"{sk}__0"
         if ck in st.session_state:
             st.download_button(
@@ -247,47 +265,49 @@ def _download_buttons(count, filename_base, fetch_fn):
             if st.button(f"⬇️  Download {count:,} Records as CSV",
                          key=f"{sk}__prep_0", use_container_width=True):
                 with st.spinner("Loading..."):
-                    st.session_state[ck] = fetch_fn(0, CHUNK_SIZE)
+                    raw = fetch_fn(0, CHUNK_SIZE)
+                if raw and len(raw.splitlines()) > 1:
+                    st.session_state[ck] = _strip_id_col(raw)
                 st.rerun()
     else:
         st.markdown(
             f"<p style='font-size:0.85rem;color:rgba(242,239,230,0.45);margin-bottom:0.8rem'>"
-            f"{count:,} records — click any chunk to prepare its download</p>",
+            f"{count:,} records — download each part in order</p>",
             unsafe_allow_html=True,
         )
         cols = st.columns(4)
         for i in range(num_chunks):
-            offset = i * CHUNK_SIZE
+            start  = i * CHUNK_SIZE + 1
             end    = min((i + 1) * CHUNK_SIZE, count)
-            label  = f"Rows {offset+1:,}–{end:,}"
-            ck     = f"{sk}__{i}"
+            label  = f"Rows {start:,}–{end:,}"
+            ck     = f"{sk}__data_{i}"
+            cur_ck = f"{sk}__cursor_{i}"   # after_id to pass when fetching chunk i
+
             with cols[i % 4]:
                 if ck in st.session_state:
-                    if st.session_state[ck]:
-                        st.download_button(
-                            label=f"⬇️  {label}",
-                            data=st.session_state[ck],
-                            file_name=f"{filename_base}_part{i+1}.csv",
-                            mime="text/csv",
-                            use_container_width=True,
-                            key=f"{sk}__dlbtn_{i}",
-                        )
-                    else:
-                        st.markdown(
-                            "<div style='text-align:center;font-size:0.75rem;"
-                            "color:rgba(242,239,230,0.3);padding:0.5rem'>end of list</div>",
-                            unsafe_allow_html=True,
-                        )
+                    st.download_button(
+                        label=f"⬇️  {label}",
+                        data=st.session_state[ck],
+                        file_name=f"{filename_base}_part{i+1}.csv",
+                        mime="text/csv",
+                        use_container_width=True,
+                        key=f"{sk}__dlbtn_{i}",
+                    )
                 else:
+                    # Chunk 0 is always available; later chunks unlock after the previous one
+                    can_fetch = (i == 0) or (cur_ck in st.session_state)
                     if st.button(label, key=f"{sk}__prep_{i}",
-                                 use_container_width=True):
+                                 use_container_width=True,
+                                 disabled=not can_fetch):
+                        after_id = st.session_state.get(cur_ck, 0)
                         with st.spinner(f"Loading {label}..."):
-                            raw = fetch_fn(offset, CHUNK_SIZE)
-                        # Only store if there are actual data rows (not just a header)
+                            raw = fetch_fn(after_id, CHUNK_SIZE)
                         if raw and len(raw.splitlines()) > 1:
-                            st.session_state[ck] = raw
-                        else:
-                            st.session_state[ck] = None
+                            # Save cursor for next chunk before stripping id col
+                            next_id = _last_id(raw)
+                            if next_id:
+                                st.session_state[f"{sk}__cursor_{i+1}"] = next_id
+                            st.session_state[ck] = _strip_id_col(raw)
                         st.rerun()
 
 
@@ -439,7 +459,7 @@ if st.session_state["list_type"] == "fsbo":
         _download_buttons(
             fsbo_count,
             f"fsbo_leads_{state}_{datetime.now().strftime('%Y%m%d')}",
-            lambda off, lim: database.get_fsbo_leads_for_download(state, limit=lim, offset=off),
+            lambda aid, lim: database.get_fsbo_leads_for_download(state, limit=lim, after_id=aid),
         )
 
     st.markdown("<p style='text-align:center;font-size:0.82rem;color:rgba(242,239,230,0.18);margin-top:2rem'>"
@@ -506,7 +526,7 @@ elif st.session_state["list_type"] == "td":
             _download_buttons(
                 td_count_n,
                 f"tax_delinquent_{state}_{td_county}_{datetime.now().strftime('%Y%m%d')}",
-                lambda off, lim: database.get_td_leads_for_download(state, td_county, limit=lim, offset=off),
+                lambda aid, lim: database.get_td_leads_for_download(state, td_county, limit=lim, after_id=aid),
             )
 
 
@@ -569,7 +589,7 @@ elif st.session_state["list_type"] == "ao":
             _download_buttons(
                 ao_count_n,
                 f"absentee_owners_{state}_{ao_county}_{datetime.now().strftime('%Y%m%d')}",
-                lambda off, lim: database.get_ao_leads_for_download(state, ao_county, limit=lim, offset=off),
+                lambda aid, lim: database.get_ao_leads_for_download(state, ao_county, limit=lim, after_id=aid),
             )
 
 
@@ -631,7 +651,7 @@ elif st.session_state["list_type"] == "cv":
             _download_buttons(
                 cv_count_n,
                 f"code_violations_{state}_{cv_city.replace(' ','_')}_{datetime.now().strftime('%Y%m%d')}",
-                lambda off, lim: database.get_cv_leads_for_download(state, cv_city, limit=lim, offset=off),
+                lambda aid, lim: database.get_cv_leads_for_download(state, cv_city, limit=lim, after_id=aid),
             )
 
 
