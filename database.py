@@ -29,17 +29,14 @@ def upload_csv(data: bytes, filename: str) -> str:
         return ""
 
 
-PAGE_SIZE = 900  # stay under Supabase's 1000-row default cap
+_PAGE_SIZE = 9_000   # safely under any Supabase row cap
 
 def _fetch_csv_export(table: str, select: str,
                       filters: list[tuple[str, str]],
                       order: str,
-                      limit: int = 500_000,
+                      limit: int = 1_000_000,
                       offset: int = 0) -> bytes:
-    """
-    Paginated PostgREST CSV export — fetches 900 rows at a time and combines.
-    Works around Supabase's 1000-row default cap. Returns full CSV bytes.
-    """
+    """Paginated PostgREST CSV export. Loops in _PAGE_SIZE chunks until done."""
     base_url = st.secrets.get("SUPABASE_URL", "")
     svc_key  = st.secrets.get("SUPABASE_SERVICE_KEY", "")
     if not base_url or not svc_key:
@@ -51,43 +48,53 @@ def _fetch_csv_export(table: str, select: str,
         "Accept":        "text/csv",
         "Prefer":        "count=none",
     }
-    all_rows  = []
-    csv_header = b""
-    page_offset = offset
 
-    while True:
-        batch = min(PAGE_SIZE, limit - len(all_rows))
+    header_row: bytes = b""
+    body_rows:  list[bytes] = []
+    fetched = 0
+
+    while fetched < limit:
+        page_limit = min(_PAGE_SIZE, limit - fetched)
         params: list[tuple[str, str]] = [
             ("select", select),
             ("order",  order),
-            ("limit",  str(batch)),
-            ("offset", str(page_offset)),
+            ("limit",  str(page_limit)),
+            ("offset", str(offset + fetched)),
         ]
         params.extend(filters)
         try:
-            r = _http.get(url, headers=headers, params=params, timeout=120)
+            r = _http.get(url, headers=headers, params=params, timeout=60)
             if not r.ok:
                 break
-            lines = r.content.splitlines(keepends=True)
-            if not lines:
-                break
-            if not csv_header:
-                csv_header = lines[0]
-                all_rows.extend(lines[1:])
-            else:
-                all_rows.extend(lines[1:])
-            if len(lines) - 1 < batch:
-                break  # last page
-            page_offset += batch
-            if len(all_rows) >= limit:
-                break
+            chunk = r.content
         except Exception as e:
             print(f"[DB] _fetch_csv_export error: {e}")
             break
 
-    if not csv_header:
+        lines = chunk.splitlines(keepends=True)
+        if not lines:
+            break
+
+        if not header_row:
+            header_row = lines[0]
+            data_lines = lines[1:]
+        else:
+            # skip repeated header if Supabase echoes it
+            data_lines = lines[1:] if lines[0] == header_row else lines
+
+        if not data_lines:
+            break
+
+        body_rows.extend(data_lines)
+        fetched += len(data_lines)
+
+        # fewer rows than requested → we've reached the end
+        if len(data_lines) < page_limit:
+            break
+
+    if not header_row:
         return b""
-    return csv_header + b"".join(all_rows)
+    return header_row + b"".join(body_rows)
 
 
 def _count_by(table: str, **eq_filters) -> int:
