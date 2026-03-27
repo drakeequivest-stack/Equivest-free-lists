@@ -327,7 +327,7 @@ def get_td_leads_for_download(state: str, county: str, limit: int = 500_000, off
             ("owner_name",       "neq."),
             ("property_address", "neq."),
         ],
-        "amount_owed.desc",
+        "id.asc",
         limit=limit,
         offset=offset,
     )
@@ -427,7 +427,7 @@ def get_ao_leads_for_download(state: str, county: str, limit: int = 500_000, off
             ("owner_name",       "neq."),
             ("property_address", "neq."),
         ],
-        "scraped_at.desc",
+        "id.asc",
         limit=limit,
         offset=offset,
     )
@@ -481,7 +481,7 @@ def get_cv_leads_for_download(state: str, city: str, limit: int = 500_000, offse
             ("city",    f"eq.{city}"),
             ("address", "neq."),
         ],
-        "filed_date.desc",
+        "id.asc",
         limit=limit,
         offset=offset,
     )
