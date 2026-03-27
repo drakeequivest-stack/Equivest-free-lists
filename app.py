@@ -225,15 +225,16 @@ user_email = user["email"]
 
 CHUNK_SIZE = 10_000
 
-def _last_id(data: bytes) -> int:
-    """Extract the integer id from the first column of the last CSV row."""
+def _last_id(data: bytes) -> str | None:
+    """Extract the raw id string from the first column of the last CSV row."""
     lines = [l for l in data.splitlines() if l.strip()]
     if len(lines) < 2:
-        return 0
+        return None
     try:
-        return int(lines[-1].split(b",")[0])
-    except (ValueError, IndexError):
-        return 0
+        val = lines[-1].split(b",")[0].decode().strip()
+        return val if val else None
+    except Exception:
+        return None
 
 def _strip_id_col(data: bytes) -> bytes:
     """Remove the leading id column from every CSV row."""
@@ -265,7 +266,7 @@ def _download_buttons(count, filename_base, fetch_fn):
             if st.button(f"⬇️  Download {count:,} Records as CSV",
                          key=f"{sk}__prep_0", use_container_width=True):
                 with st.spinner("Loading..."):
-                    raw = fetch_fn(0, CHUNK_SIZE)
+                    raw = fetch_fn(None, CHUNK_SIZE)
                 if raw and len(raw.splitlines()) > 1:
                     st.session_state[ck] = _strip_id_col(raw)
                 st.rerun()
@@ -299,11 +300,11 @@ def _download_buttons(count, filename_base, fetch_fn):
                     if st.button(label, key=f"{sk}__prep_{i}",
                                  use_container_width=True,
                                  disabled=not can_fetch):
-                        after_id = st.session_state.get(cur_ck, 0)
+                        # cur_ck holds the after_id string (or is absent for chunk 0)
+                        after_id = st.session_state.get(cur_ck, None)
                         with st.spinner(f"Loading {label}..."):
                             raw = fetch_fn(after_id, CHUNK_SIZE)
                         if raw and len(raw.splitlines()) > 1:
-                            # Save cursor for next chunk before stripping id col
                             next_id = _last_id(raw)
                             if next_id:
                                 st.session_state[f"{sk}__cursor_{i+1}"] = next_id

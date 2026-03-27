@@ -116,17 +116,19 @@ def get_fsbo_count(state: str) -> int:
     except Exception:
         return 0
 
-def get_fsbo_leads_for_download(state: str, limit: int = 10_000, after_id: int = 0) -> bytes:
+def get_fsbo_leads_for_download(state: str, limit: int = 10_000, after_id: str | None = None) -> bytes:
     """CSV bytes — active FSBO leads for state, cursor-paginated by id."""
     now = datetime.now(timezone.utc).isoformat()
+    filters = [
+        ("state",      f"eq.{state}"),
+        ("expires_at", f"gt.{now}"),
+    ]
+    if after_id is not None:
+        filters.append(("id", f"gt.{after_id}"))
     return _fetch_csv_export(
         "fsbo_leads",
         "id,title,price,city,state,address,phone,url,source,posted_at",
-        [
-            ("state",      f"eq.{state}"),
-            ("expires_at", f"gt.{now}"),
-            ("id",         f"gt.{after_id}"),
-        ],
+        filters,
         "id.asc",
         limit=limit,
         offset=0,
@@ -324,18 +326,20 @@ def get_td_county_count(state: str, county: str) -> int:
     except Exception:
         return 0
 
-def get_td_leads_for_download(state: str, county: str, limit: int = 10_000, after_id: int = 0) -> bytes:
+def get_td_leads_for_download(state: str, county: str, limit: int = 10_000, after_id: str | None = None) -> bytes:
     """CSV bytes — TD records for state/county, cursor-paginated by id."""
+    filters = [
+        ("state",            f"eq.{state}"),
+        ("county",           f"eq.{county}"),
+        ("owner_name",       "neq."),
+        ("property_address", "neq."),
+    ]
+    if after_id is not None:
+        filters.append(("id", f"gt.{after_id}"))
     return _fetch_csv_export(
         "tax_delinquent_leads",
         "id,owner_name,property_address,county,state,parcel_id,amount_owed,assessed_value,tax_year",
-        [
-            ("state",            f"eq.{state}"),
-            ("county",           f"eq.{county}"),
-            ("owner_name",       "neq."),
-            ("property_address", "neq."),
-            ("id",               f"gt.{after_id}"),
-        ],
+        filters,
         "id.asc",
         limit=limit,
         offset=0,
@@ -438,18 +442,20 @@ def get_ao_county_count(state: str, county: str) -> int:
     except Exception:
         return 0
 
-def get_ao_leads_for_download(state: str, county: str, limit: int = 10_000, after_id: int = 0) -> bytes:
+def get_ao_leads_for_download(state: str, county: str, limit: int = 10_000, after_id: str | None = None) -> bytes:
     """CSV bytes — AO records for state/county, cursor-paginated by id."""
+    filters = [
+        ("state",            f"eq.{state}"),
+        ("county",           f"eq.{county}"),
+        ("owner_name",       "neq."),
+        ("property_address", "neq."),
+    ]
+    if after_id is not None:
+        filters.append(("id", f"gt.{after_id}"))
     return _fetch_csv_export(
         "absentee_owner_leads",
         "id,owner_name,owner_address,property_address,county,state,parcel_id,amount_owed,source_url",
-        [
-            ("state",            f"eq.{state}"),
-            ("county",           f"eq.{county}"),
-            ("owner_name",       "neq."),
-            ("property_address", "neq."),
-            ("id",               f"gt.{after_id}"),
-        ],
+        filters,
         "id.asc",
         limit=limit,
         offset=0,
@@ -506,17 +512,19 @@ def get_cv_city_count(state: str, city: str) -> int:
     except Exception:
         return 0
 
-def get_cv_leads_for_download(state: str, city: str, limit: int = 10_000, after_id: int = 0) -> bytes:
+def get_cv_leads_for_download(state: str, city: str, limit: int = 10_000, after_id: str | None = None) -> bytes:
     """CSV bytes — CV records for state/city, cursor-paginated by id."""
+    filters = [
+        ("state",   f"eq.{state}"),
+        ("city",    f"eq.{city}"),
+        ("address", "neq."),
+    ]
+    if after_id is not None:
+        filters.append(("id", f"gt.{after_id}"))
     return _fetch_csv_export(
         "code_violation_leads",
         "id,address,city,state,parcel_id,violation_type,violation_sub,case_status,filed_date,last_insp_date,source_url",
-        [
-            ("state",   f"eq.{state}"),
-            ("city",    f"eq.{city}"),
-            ("address", "neq."),
-            ("id",      f"gt.{after_id}"),
-        ],
+        filters,
         "id.asc",
         limit=limit,
         offset=0,
