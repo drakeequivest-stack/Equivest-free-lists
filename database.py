@@ -29,14 +29,12 @@ def upload_csv(data: bytes, filename: str) -> str:
         return ""
 
 
-_PAGE_SIZE = 9_000   # safely under any Supabase row cap
-
 def _fetch_csv_export(table: str, select: str,
                       filters: list[tuple[str, str]],
                       order: str,
-                      limit: int = 1_000_000,
+                      limit: int = 10_000,
                       offset: int = 0) -> bytes:
-    """Paginated PostgREST CSV export. Loops in _PAGE_SIZE chunks until done."""
+    """Single PostgREST CSV request for a specific slice of rows."""
     base_url = st.secrets.get("SUPABASE_URL", "")
     svc_key  = st.secrets.get("SUPABASE_SERVICE_KEY", "")
     if not base_url or not svc_key:
@@ -48,53 +46,19 @@ def _fetch_csv_export(table: str, select: str,
         "Accept":        "text/csv",
         "Prefer":        "count=none",
     }
-
-    header_row: bytes = b""
-    body_rows:  list[bytes] = []
-    fetched = 0
-
-    while fetched < limit:
-        page_limit = min(_PAGE_SIZE, limit - fetched)
-        params: list[tuple[str, str]] = [
-            ("select", select),
-            ("order",  order),
-            ("limit",  str(page_limit)),
-            ("offset", str(offset + fetched)),
-        ]
-        params.extend(filters)
-        try:
-            r = _http.get(url, headers=headers, params=params, timeout=60)
-            if not r.ok:
-                break
-            chunk = r.content
-        except Exception as e:
-            print(f"[DB] _fetch_csv_export error: {e}")
-            break
-
-        lines = chunk.splitlines(keepends=True)
-        if not lines:
-            break
-
-        if not header_row:
-            header_row = lines[0]
-            data_lines = lines[1:]
-        else:
-            # skip repeated header if Supabase echoes it
-            data_lines = lines[1:] if lines[0] == header_row else lines
-
-        if not data_lines:
-            break
-
-        body_rows.extend(data_lines)
-        fetched += len(data_lines)
-
-        # fewer rows than requested → we've reached the end
-        if len(data_lines) < page_limit:
-            break
-
-    if not header_row:
+    params: list[tuple[str, str]] = [
+        ("select", select),
+        ("order",  order),
+        ("limit",  str(limit)),
+        ("offset", str(offset)),
+    ]
+    params.extend(filters)
+    try:
+        r = _http.get(url, headers=headers, params=params, timeout=60)
+        return r.content if r.ok else b""
+    except Exception as e:
+        print(f"[DB] _fetch_csv_export error: {e}")
         return b""
-    return header_row + b"".join(body_rows)
 
 
 def _count_by(table: str, **eq_filters) -> int:

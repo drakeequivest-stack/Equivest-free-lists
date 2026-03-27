@@ -223,58 +223,60 @@ if not show_auth():
 user       = st.session_state["user"]
 user_email = user["email"]
 
-CHUNK_SIZE = 20_000
-
-def _split_csv(raw: bytes, chunk_size: int = CHUNK_SIZE) -> list[bytes]:
-    """Split CSV bytes into chunks of chunk_size data rows (preserving header)."""
-    if not raw:
-        return []
-    lines = raw.splitlines(keepends=True)
-    if len(lines) < 2:
-        return [raw]
-    header = lines[0]
-    rows = lines[1:]
-    chunks = []
-    for i in range(0, max(len(rows), 1), chunk_size):
-        chunk_rows = rows[i : i + chunk_size]
-        chunks.append(header + b"".join(chunk_rows))
-    return chunks
-
+CHUNK_SIZE = 10_000
 
 def _download_buttons(count, filename_base, fetch_fn):
-    with st.spinner("Preparing download..."):
-        data = fetch_fn(0, 500_000)
-    if not data:
-        st.warning("No data available to download.")
+    if not count:
         return
-    chunks = _split_csv(data)
-    if len(chunks) == 1:
-        st.download_button(
-            label=f"⬇️  Download {count:,} Records as CSV",
-            data=chunks[0],
-            file_name=f"{filename_base}.csv",
-            mime="text/csv",
-            use_container_width=True,
-        )
+    num_chunks = max(1, (count + CHUNK_SIZE - 1) // CHUNK_SIZE)
+    sk = f"dl__{filename_base}"  # session_state key prefix
+
+    if num_chunks == 1:
+        # Small list — single fetch-then-download flow
+        ck = f"{sk}__0"
+        if ck in st.session_state:
+            st.download_button(
+                label=f"⬇️  Download {count:,} Records as CSV",
+                data=st.session_state[ck],
+                file_name=f"{filename_base}.csv",
+                mime="text/csv",
+                use_container_width=True,
+                key=f"{sk}__dlbtn_0",
+            )
+        else:
+            if st.button(f"⬇️  Download {count:,} Records as CSV",
+                         key=f"{sk}__prep_0", use_container_width=True):
+                with st.spinner("Loading..."):
+                    st.session_state[ck] = fetch_fn(0, CHUNK_SIZE)
+                st.rerun()
     else:
         st.markdown(
-            f"<p style='font-size:0.85rem;color:rgba(242,239,230,0.45);margin-bottom:0.6rem'>"
-            f"Large list — split into {len(chunks)} files of up to {CHUNK_SIZE:,} rows each.</p>",
+            f"<p style='font-size:0.85rem;color:rgba(242,239,230,0.45);margin-bottom:0.8rem'>"
+            f"{count:,} records — click any chunk to prepare its download</p>",
             unsafe_allow_html=True,
         )
-        cols = st.columns(min(len(chunks), 4))
-        for i, chunk in enumerate(chunks):
-            start = i * CHUNK_SIZE + 1
-            end   = min((i + 1) * CHUNK_SIZE, count)
+        cols = st.columns(4)
+        for i in range(num_chunks):
+            offset = i * CHUNK_SIZE
+            end    = min((i + 1) * CHUNK_SIZE, count)
+            label  = f"Rows {offset+1:,}–{end:,}"
+            ck     = f"{sk}__{i}"
             with cols[i % 4]:
-                st.download_button(
-                    label=f"⬇️  Rows {start:,}–{end:,}",
-                    data=chunk,
-                    file_name=f"{filename_base}_part{i+1}.csv",
-                    mime="text/csv",
-                    use_container_width=True,
-                    key=f"dl_{filename_base}_{i}",
-                )
+                if ck in st.session_state:
+                    st.download_button(
+                        label=f"⬇️  {label}",
+                        data=st.session_state[ck],
+                        file_name=f"{filename_base}_part{i+1}.csv",
+                        mime="text/csv",
+                        use_container_width=True,
+                        key=f"{sk}__dlbtn_{i}",
+                    )
+                else:
+                    if st.button(label, key=f"{sk}__prep_{i}",
+                                 use_container_width=True):
+                        with st.spinner(f"Loading {label}..."):
+                            st.session_state[ck] = fetch_fn(offset, CHUNK_SIZE)
+                        st.rerun()
 
 
 # ── Header ─────────────────────────────────────────────────────────────────────
