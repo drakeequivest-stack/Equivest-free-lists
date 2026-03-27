@@ -234,25 +234,37 @@ def _split_csv(data: bytes, chunk_size: int) -> list[bytes]:
     rows   = lines[1:]
     chunks = []
     for i in range(0, len(rows), chunk_size):
-        chunk = header + b"".join(rows[i:i + chunk_size])
-        chunks.append(chunk)
+        chunks.append(header + b"".join(rows[i:i + chunk_size]))
     return chunks if chunks else [data]
 
+
+_LINK_STYLE = (
+    "display:block;width:100%;text-align:center;padding:0.65rem 0.5rem;"
+    "background:linear-gradient(135deg,#C9A84C,#E8D070);color:#080a14;"
+    "font-family:Outfit,sans-serif;font-weight:800;font-size:0.88rem;"
+    "border-radius:10px;text-decoration:none;box-sizing:border-box;margin-bottom:0.4rem"
+)
 
 def _download_buttons(count, filename_base, fetch_fn, label_color="#C9A84C"):
     """Fetch full CSV once, split into chunks, upload to Storage, show links."""
     cache_key = f"csv_urls_{filename_base}"
 
+    # Always show a reset button if already prepared
+    if cache_key in st.session_state:
+        if st.button("↺  Reset / Re-prepare", key=f"reset_{filename_base}"):
+            del st.session_state[cache_key]
+            st.rerun()
+
     if cache_key not in st.session_state:
         if st.button("⬇️  Prepare Download", use_container_width=True, key=f"prep_{filename_base}"):
-            with st.spinner("Preparing download..."):
+            with st.spinner("Fetching and uploading data..."):
                 full_data = fetch_fn(0, 500_000)
                 parts     = _split_csv(full_data, CHUNK)
                 urls = []
                 for i, part in enumerate(parts):
                     fname = f"{filename_base}_part{i+1}.csv" if len(parts) > 1 else f"{filename_base}.csv"
                     start = i * CHUNK + 1
-                    end   = min((i + 1) * CHUNK, count)
+                    end   = min((i + 1) * CHUNK, len(full_data.splitlines()) - 1)
                     url   = database.upload_csv(part, fname)
                     urls.append((url, fname, start, end))
                 st.session_state[cache_key] = urls
@@ -260,30 +272,14 @@ def _download_buttons(count, filename_base, fetch_fn, label_color="#C9A84C"):
         return
 
     urls = st.session_state[cache_key]
+    st.markdown(f"<p style='font-size:0.8rem;color:rgba(242,239,230,0.3);margin:0 0 0.6rem'>Ready — {len(urls)} file(s) to download</p>", unsafe_allow_html=True)
+
     if len(urls) == 1:
         url, fname, _, _ = urls[0]
-        st.markdown(
-            f'<a href="{url}" target="_blank" '
-            f'style="display:block;width:100%;text-align:center;padding:0.65rem 1.5rem;'
-            f'background:linear-gradient(135deg,#C9A84C,#E8D070);color:#080a14;'
-            f'font-family:Outfit,sans-serif;font-weight:800;font-size:0.95rem;'
-            f'border-radius:10px;text-decoration:none;box-sizing:border-box">'
-            f'⬇️  Download {count:,} Records as CSV</a>',
-            unsafe_allow_html=True,
-        )
+        st.markdown(f'<a href="{url}" target="_blank" style="{_LINK_STYLE}">⬇️  Download {count:,} Records as CSV</a>', unsafe_allow_html=True)
     else:
-        cols = st.columns(min(len(urls), 3))
         for i, (url, fname, start, end) in enumerate(urls):
-            with cols[i % 3]:
-                st.markdown(
-                    f'<a href="{url}" target="_blank" '
-                    f'style="display:block;width:100%;text-align:center;padding:0.65rem 0.5rem;'
-                    f'background:linear-gradient(135deg,#C9A84C,#E8D070);color:#080a14;'
-                    f'font-family:Outfit,sans-serif;font-weight:800;font-size:0.85rem;'
-                    f'border-radius:10px;text-decoration:none;box-sizing:border-box">'
-                    f'⬇️  Rows {start:,}–{end:,}</a>',
-                    unsafe_allow_html=True,
-                )
+            st.markdown(f'<a href="{url}" target="_blank" style="{_LINK_STYLE}">⬇️  Part {i+1} — Rows {start:,}–{end:,}</a>', unsafe_allow_html=True)
 
 
 # ── Header ─────────────────────────────────────────────────────────────────────
