@@ -226,11 +226,15 @@ user_email = user["email"]
 CHUNK_SIZE = 10_000
 
 def _last_id(data: bytes) -> str | None:
-    lines = [l for l in data.splitlines() if l.strip()]
-    if len(lines) < 2:
-        return None
+    """Parse last row id using csv module — handles quoted fields with newlines."""
+    import csv, io
     try:
-        val = lines[-1].split(b",")[0].decode().strip()
+        text = data.decode("utf-8", errors="replace")
+        rows = list(csv.reader(io.StringIO(text)))
+        # rows[0] = header, rows[1:] = data; first column is id
+        if len(rows) < 2:
+            return None
+        val = rows[-1][0].strip()
         return val if val else None
     except Exception:
         return None

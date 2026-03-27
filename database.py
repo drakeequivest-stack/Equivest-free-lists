@@ -52,6 +52,33 @@ def upload_csv(data: bytes, filename: str) -> str:
         return ""
 
 
+def _count_from_filters(table: str, filters: list[tuple[str, str]]) -> int:
+    """Exact row count using same REST filters as download — guaranteed to match."""
+    base_url = st.secrets.get("SUPABASE_URL", "")
+    svc_key  = st.secrets.get("SUPABASE_SERVICE_KEY", "")
+    if not base_url or not svc_key:
+        return 0
+    url = f"{base_url}/rest/v1/{table}"
+    headers = {
+        "apikey":        svc_key,
+        "Authorization": f"Bearer {svc_key}",
+        "Prefer":        "count=exact",
+        "Range-Unit":    "items",
+        "Range":         "0-0",
+    }
+    params = [("select", "id")] + list(filters)
+    try:
+        r = _http.get(url, headers=headers, params=params, timeout=30)
+        cr = r.headers.get("Content-Range", "")
+        if "/" in cr:
+            total = cr.split("/")[-1]
+            if total != "*":
+                return int(total)
+        return 0
+    except Exception:
+        return 0
+
+
 def _fetch_csv_export(table: str, select: str,
                       filters: list[tuple[str, str]],
                       order: str,
@@ -338,23 +365,13 @@ def get_td_counties(state: str) -> list[str]:
 
 @st.cache_data(ttl=_TTL)
 def get_td_county_count(state: str, county: str) -> int:
-    try:
-        q = (
-            _admin()
-            .table("tax_delinquent_leads")
-            .select("id", count="exact")
-            .eq("state", state)
-            .eq("county", county)
-            .neq("owner_name", "")
-            .neq("property_address", "")
-        )
-        for kw in ("LLC","L.L.C","Corp","Inc.","Ltd","Trust","Holdings",
-                   "Properties","Partners","Association","Investments",
-                   "Enterprises","Realty","Real Estate"):
-            q = q.not_.ilike("owner_name", f"%{kw}%")
-        return q.execute().count or 0
-    except Exception:
-        return 0
+    filters = [
+        ("state",            f"eq.{state}"),
+        ("county",           f"eq.{county}"),
+        ("owner_name",       "neq."),
+        ("property_address", "neq."),
+    ] + _ENTITY_FILTERS
+    return _count_from_filters("tax_delinquent_leads", filters)
 
 def get_td_leads_for_download(state: str, county: str, limit: int = 10_000, after_id: str | None = None) -> bytes:
     """CSV bytes — TD records for state/county, cursor-paginated by id."""
@@ -460,23 +477,13 @@ def get_ao_counties(state: str) -> list[str]:
 
 @st.cache_data(ttl=_TTL)
 def get_ao_county_count(state: str, county: str) -> int:
-    try:
-        q = (
-            _admin()
-            .table("absentee_owner_leads")
-            .select("id", count="exact")
-            .eq("state", state)
-            .eq("county", county)
-            .neq("owner_name", "")
-            .neq("property_address", "")
-        )
-        for kw in ("LLC","L.L.C","Corp","Inc.","Ltd","Trust","Holdings",
-                   "Properties","Partners","Association","Investments",
-                   "Enterprises","Realty","Real Estate"):
-            q = q.not_.ilike("owner_name", f"%{kw}%")
-        return q.execute().count or 0
-    except Exception:
-        return 0
+    filters = [
+        ("state",            f"eq.{state}"),
+        ("county",           f"eq.{county}"),
+        ("owner_name",       "neq."),
+        ("property_address", "neq."),
+    ] + _ENTITY_FILTERS
+    return _count_from_filters("absentee_owner_leads", filters)
 
 def get_ao_leads_for_download(state: str, county: str, limit: int = 10_000, after_id: str | None = None) -> bytes:
     """CSV bytes — AO records for state/county, cursor-paginated by id."""
@@ -537,19 +544,12 @@ def get_cv_cities(state: str) -> list[str]:
 
 @st.cache_data(ttl=_TTL)
 def get_cv_city_count(state: str, city: str) -> int:
-    try:
-        resp = (
-            _admin()
-            .table("code_violation_leads")
-            .select("id", count="exact")
-            .eq("state", state)
-            .eq("city", city)
-            .neq("address", "")
-            .execute()
-        )
-        return resp.count or 0
-    except Exception:
-        return 0
+    filters = [
+        ("state",   f"eq.{state}"),
+        ("city",    f"eq.{city}"),
+        ("address", "neq."),
+    ]
+    return _count_from_filters("code_violation_leads", filters)
 
 def get_cv_leads_for_download(state: str, city: str, limit: int = 10_000, after_id: str | None = None) -> bytes:
     """CSV bytes — CV records for state/city, cursor-paginated by id."""
