@@ -29,16 +29,16 @@ def upload_csv(data: bytes, filename: str) -> str:
         return ""
 
 
+PAGE_SIZE = 900  # stay under Supabase's 1000-row default cap
+
 def _fetch_csv_export(table: str, select: str,
                       filters: list[tuple[str, str]],
                       order: str,
                       limit: int = 500_000,
                       offset: int = 0) -> bytes:
     """
-    Direct PostgREST CSV export — single HTTP request, bypasses SDK's 1k-row cap.
-    Returns raw CSV bytes ready for st.download_button.
-    `filters` is a list of (column, postgrest_value) e.g. ("state","eq.Arizona").
-    Use ("col","neq.") to exclude empty strings.
+    Paginated PostgREST CSV export — fetches 900 rows at a time and combines.
+    Works around Supabase's 1000-row default cap. Returns full CSV bytes.
     """
     base_url = st.secrets.get("SUPABASE_URL", "")
     svc_key  = st.secrets.get("SUPABASE_SERVICE_KEY", "")
@@ -51,20 +51,43 @@ def _fetch_csv_export(table: str, select: str,
         "Accept":        "text/csv",
         "Prefer":        "count=none",
     }
-    # list-of-tuples preserves duplicate keys (e.g. two filters on same column)
-    params: list[tuple[str, str]] = [
-        ("select", select),
-        ("order",  order),
-        ("limit",  str(limit)),
-        ("offset", str(offset)),
-    ]
-    params.extend(filters)
-    try:
-        r = _http.get(url, headers=headers, params=params, timeout=120)
-        return r.content if r.ok else b""
-    except Exception as e:
-        print(f"[DB] _fetch_csv_export error: {e}")
+    all_rows  = []
+    csv_header = b""
+    page_offset = offset
+
+    while True:
+        batch = min(PAGE_SIZE, limit - len(all_rows))
+        params: list[tuple[str, str]] = [
+            ("select", select),
+            ("order",  order),
+            ("limit",  str(batch)),
+            ("offset", str(page_offset)),
+        ]
+        params.extend(filters)
+        try:
+            r = _http.get(url, headers=headers, params=params, timeout=120)
+            if not r.ok:
+                break
+            lines = r.content.splitlines(keepends=True)
+            if not lines:
+                break
+            if not csv_header:
+                csv_header = lines[0]
+                all_rows.extend(lines[1:])
+            else:
+                all_rows.extend(lines[1:])
+            if len(lines) - 1 < batch:
+                break  # last page
+            page_offset += batch
+            if len(all_rows) >= limit:
+                break
+        except Exception as e:
+            print(f"[DB] _fetch_csv_export error: {e}")
+            break
+
+    if not csv_header:
         return b""
+    return csv_header + b"".join(all_rows)
 
 
 def _count_by(table: str, **eq_filters) -> int:
