@@ -1,6 +1,26 @@
 """
 FSBO Scraper — Supabase operations
 """
+
+# Entity keywords to exclude from owner lists (applied as NOT ILIKE filters)
+_ENTITY_FILTERS: list[tuple[str, str]] = [
+    ("owner_name", "not.ilike.*LLC*"),
+    ("owner_name", "not.ilike.*L.L.C*"),
+    ("owner_name", "not.ilike.* LP*"),
+    ("owner_name", "not.ilike.* L.P.*"),
+    ("owner_name", "not.ilike.*Corp*"),
+    ("owner_name", "not.ilike.*Inc.*"),
+    ("owner_name", "not.ilike.*Ltd*"),
+    ("owner_name", "not.ilike.*Trust*"),
+    ("owner_name", "not.ilike.*Holdings*"),
+    ("owner_name", "not.ilike.*Properties*"),
+    ("owner_name", "not.ilike.*Partners*"),
+    ("owner_name", "not.ilike.*Association*"),
+    ("owner_name", "not.ilike.*Investments*"),
+    ("owner_name", "not.ilike.*Enterprises*"),
+    ("owner_name", "not.ilike.*Realty*"),
+    ("owner_name", "not.ilike.*Real Estate*"),
+]
 import streamlit as st
 import requests as _http
 from supabase import create_client, Client
@@ -312,7 +332,7 @@ def get_td_counties(state: str) -> list[str]:
 
 def get_td_county_count(state: str, county: str) -> int:
     try:
-        resp = (
+        q = (
             _admin()
             .table("tax_delinquent_leads")
             .select("id", count="exact")
@@ -320,9 +340,12 @@ def get_td_county_count(state: str, county: str) -> int:
             .eq("county", county)
             .neq("owner_name", "")
             .neq("property_address", "")
-            .execute()
         )
-        return resp.count or 0
+        for kw in ("LLC","L.L.C","Corp","Inc.","Ltd","Trust","Holdings",
+                   "Properties","Partners","Association","Investments",
+                   "Enterprises","Realty","Real Estate"):
+            q = q.not_.ilike("owner_name", f"%{kw}%")
+        return q.execute().count or 0
     except Exception:
         return 0
 
@@ -333,7 +356,7 @@ def get_td_leads_for_download(state: str, county: str, limit: int = 10_000, afte
         ("county",           f"eq.{county}"),
         ("owner_name",       "neq."),
         ("property_address", "neq."),
-    ]
+    ] + _ENTITY_FILTERS
     if after_id is not None:
         filters.append(("id", f"gt.{after_id}"))
     return _fetch_csv_export(
@@ -428,7 +451,7 @@ def get_ao_counties(state: str) -> list[str]:
 
 def get_ao_county_count(state: str, county: str) -> int:
     try:
-        resp = (
+        q = (
             _admin()
             .table("absentee_owner_leads")
             .select("id", count="exact")
@@ -436,9 +459,12 @@ def get_ao_county_count(state: str, county: str) -> int:
             .eq("county", county)
             .neq("owner_name", "")
             .neq("property_address", "")
-            .execute()
         )
-        return resp.count or 0
+        for kw in ("LLC","L.L.C","Corp","Inc.","Ltd","Trust","Holdings",
+                   "Properties","Partners","Association","Investments",
+                   "Enterprises","Realty","Real Estate"):
+            q = q.not_.ilike("owner_name", f"%{kw}%")
+        return q.execute().count or 0
     except Exception:
         return 0
 
@@ -449,7 +475,7 @@ def get_ao_leads_for_download(state: str, county: str, limit: int = 10_000, afte
         ("county",           f"eq.{county}"),
         ("owner_name",       "neq."),
         ("property_address", "neq."),
-    ]
+    ] + _ENTITY_FILTERS
     if after_id is not None:
         filters.append(("id", f"gt.{after_id}"))
     return _fetch_csv_export(

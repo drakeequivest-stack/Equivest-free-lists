@@ -301,7 +301,7 @@ def _download_buttons(count, filename_base, fetch_fn):
                 pct     = min(len(chunks) / est, 1.0)
                 fetched = min(len(chunks) * CHUNK_SIZE, count)
                 bar.progress(pct, text=f"Fetched {fetched:,} of ~{count:,} records…")
-                if len(data_lines) < CHUNK_SIZE or after_id is None:
+                if after_id is None:
                     break
             bar.empty()
             if chunks:
