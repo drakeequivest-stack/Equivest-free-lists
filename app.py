@@ -1,5 +1,5 @@
 """
-Equivest Academy — Lead Finder
+Equivest Academy — FREE LISTS FOR INVESTORS 
 """
 import streamlit as st
 import database
@@ -235,7 +235,7 @@ def show_auth():
         -webkit-background-clip:text;-webkit-text-fill-color:transparent;
         background-clip:text;margin-bottom:0.7rem">Lead Finder</div>
       <div style="font-size:1rem;color:rgba(242,239,230,0.45)">
-        Exclusive leads for Equivest Academy members</div>
+        Free lists for Equivest Academy members</div>
     </div>""", unsafe_allow_html=True)
 
     _, col, _ = st.columns([1, 2, 1])
@@ -370,7 +370,7 @@ def _download_buttons(count, filename_base, fetch_fn):
 # ── Header ─────────────────────────────────────────────────────────────────────
 col_h, col_out = st.columns([5, 1])
 with col_h:
-    st.markdown('<div class="eq-logo">Equivest Academy</div><div class="eq-title">Lead Finder</div>',
+    st.markdown('<div class="eq-logo">Equivest Academy</div><div class="eq-title">Free Lists</div>',
                 unsafe_allow_html=True)
 with col_out:
     st.markdown("<div style='height:2.5rem'></div>", unsafe_allow_html=True)
@@ -446,9 +446,9 @@ st.markdown(f"""
 
 st.markdown("""
 <div class="rules-box" style="margin-top:1.5rem">
-  <p>⬇️ Select a list type above, then download the full CSV — no limits</p>
-  <p>🔄 Lists are refreshed regularly from public government &amp; listing data</p>
-  <p>🔍 Skip trace owners to get phone/email contact info</p>
+  <p>Select a list type above, then download the full CSV. No limits!</p>
+  <p>Lists are refreshed monthly from public government &amp; listing data</p>
+  <p>Skip trace the owners to get phone/email contact info</p>
 </div>""", unsafe_allow_html=True)
 
 st.markdown("<div style='height:0.5rem'></div>", unsafe_allow_html=True)
@@ -474,7 +474,7 @@ if st.session_state["list_type"] == "fsbo":
       border-left:4px solid #C9A84C;border-radius:12px;padding:1.4rem 1.6rem;margin-bottom:1.5rem">
       <div style="font-size:1rem;font-weight:800;color:#C9A84C;margin-bottom:0.8rem">🏠 For Sale By Owner Leads</div>
       <p style="font-size:0.9rem;color:rgba(242,239,230,0.7);margin:0.3rem 0">
-        Active FSBO listings scraped from Craigslist and fsbo.com — owners selling
+        Active FSBO listings scraped from Craigslist and fsbo.com. Owners selling
         without an agent, often open to creative offers and below-market deals.
       </p>
       <div style="margin-top:1rem;display:grid;grid-template-columns:1fr 1fr;gap:0.6rem">
@@ -483,8 +483,7 @@ if st.session_state["list_type"] == "fsbo":
           <div style="font-size:0.82rem;color:rgba(242,239,230,0.6)">
             1. Download the CSV<br>
             2. Call the phone number directly<br>
-            3. Ask if they'd consider a cash offer<br>
-            4. Move fast — FSBOs list with agents quickly
+            3. Lead with being a local buyer and ask about their situation<br>
           </div>
         </div>
         <div style="background:rgba(201,168,76,0.08);border-radius:8px;padding:0.7rem 1rem">
@@ -492,8 +491,8 @@ if st.session_state["list_type"] == "fsbo":
           <div style="font-size:0.82rem;color:rgba(242,239,230,0.6)">
             • Listings with a phone number included<br>
             • Price reductions or "motivated" language<br>
-            • Days on market — older = more motivated<br>
-            • fsbo.com leads have owner name included
+            • Days on market = older = more motivated<br>
+            • fsbo.com leads have owner name typically included
           </div>
         </div>
       </div>
@@ -506,7 +505,7 @@ if st.session_state["list_type"] == "fsbo":
     else:
         st.markdown(
             f"<div class='eq-count-label'>"
-            f"<strong style='color:#C9A84C'>{fsbo_count:,}</strong> active listings — {state}"
+            f"<strong style='color:#C9A84C'>{fsbo_count:,}</strong> active in {state}"
             f"</div>",
             unsafe_allow_html=True
         )
@@ -517,7 +516,7 @@ if st.session_state["list_type"] == "fsbo":
         )
 
     st.markdown("<p style='text-align:center;font-size:0.82rem;color:rgba(242,239,230,0.18);margin-top:2rem'>"
-                "Don't see your state? More markets coming soon.</p>", unsafe_allow_html=True)
+                "Don't see your state? More markets coming soon!</p>", unsafe_allow_html=True)
 
 
 # ── Tax Delinquent ─────────────────────────────────────────────────────────────
@@ -526,7 +525,7 @@ elif st.session_state["list_type"] == "td":
     <div style="background:rgba(220,60,60,0.06);border:1px solid rgba(220,60,60,0.2);
       border-left:4px solid #e05555;border-radius:12px;padding:1.4rem 1.6rem;margin-bottom:1.5rem">
       <div style="font-size:1rem;font-weight:800;color:#e05555;margin-bottom:0.8rem">
-        📋 What is a Tax Delinquent List?
+        What is a Tax Delinquent List?
       </div>
       <p style="font-size:0.9rem;color:rgba(242,239,230,0.7);margin:0.3rem 0">
         These are property owners who owe <strong style="color:#F2EFE6">unpaid property taxes</strong> —
@@ -534,9 +533,8 @@ elif st.session_state["list_type"] == "td":
         They still own the property and can sell it.
       </p>
       <p style="font-size:0.9rem;color:rgba(242,239,230,0.7);margin:0.3rem 0">
-        Owners behind on taxes are often cash-strapped, dealing with life changes, or simply overwhelmed.
-        A fast cash offer that clears their debt can be extremely attractive — making these
-        some of the most motivated sellers you'll ever call.
+        Owners behind on taxes are often tight on cash, dealing with life changes, or simply overwhelmed.
+        A fast cash offer that clears their debt can be extremely attractive.
       </p>
       <div style="margin-top:1rem;display:grid;grid-template-columns:1fr 1fr;gap:0.6rem">
         <div style="background:rgba(220,60,60,0.08);border-radius:8px;padding:0.7rem 1rem">
@@ -544,17 +542,15 @@ elif st.session_state["list_type"] == "td":
           <div style="font-size:0.82rem;color:rgba(242,239,230,0.6)">
             1. Download the CSV<br>
             2. Skip trace the owner name + address<br>
-            3. Call and lead with paying off their debt<br>
-            4. Make an offer on the equity
+            3. Call and use the cold call/warm lead script in scripts vault<br>
           </div>
         </div>
         <div style="background:rgba(220,60,60,0.08);border-radius:8px;padding:0.7rem 1rem">
           <div style="font-size:0.78rem;font-weight:700;color:#e05555;margin-bottom:0.2rem">WHAT TO LOOK FOR</div>
           <div style="font-size:0.82rem;color:rgba(242,239,230,0.6)">
             • Higher amount owed = more distress<br>
-            • Multiple years delinquent = very motivated<br>
-            • LLCs/corps already filtered out<br>
-            • Individual owners only
+            • Multiple years delinquent = higher motivation<br>
+            • LLCs/corps should already be filtered out<br>
           </div>
         </div>
       </div>
@@ -570,7 +566,7 @@ elif st.session_state["list_type"] == "td":
         td_count_n = database.get_td_county_count(state, td_county)
         st.markdown(
             f"<div class='eq-count-label'>"
-            f"<strong style='color:#e05555'>{td_count_n:,}</strong> individual owners — {td_county} County, {state}"
+            f"<strong style='color:#e05555'>{td_count_n:,}</strong> individual owners in {td_county} County, {state}"
             f"</div>",
             unsafe_allow_html=True
         )
@@ -588,16 +584,16 @@ elif st.session_state["list_type"] == "ao":
     <div style="background:rgba(96,165,250,0.06);border:1px solid rgba(96,165,250,0.2);
       border-left:4px solid #60A5FA;border-radius:12px;padding:1.4rem 1.6rem;margin-bottom:1.5rem">
       <div style="font-size:1rem;font-weight:800;color:#60A5FA;margin-bottom:0.8rem">
-        🏢 What is an Absentee Owner List?
+        What is an Absentee Owner List?
       </div>
       <p style="font-size:0.9rem;color:rgba(242,239,230,0.7);margin:0.3rem 0">
-        These are property owners whose <strong style="color:#F2EFE6">mailing address is different from the property address</strong> —
-        meaning they don't live there. They're landlords or out-of-state investors managing a property remotely.
+        These are property owners whose <strong style="color:#F2EFE6">mailing address is different from the property address</strong>,
+        meaning they don't live there. They're usually landlords or out-of-state investors managing a property remotely.
       </p>
       <p style="font-size:0.9rem;color:rgba(242,239,230,0.7);margin:0.3rem 0">
         Absentee owners are often tired of dealing with tenants, maintenance, and management from afar.
-        <strong style="color:#F2EFE6">Out-of-state absentees are especially motivated</strong> — a fast,
-        no-hassle cash offer lets them be done with a problem they can't even drive to fix.
+        <strong style="color:#F2EFE6">Out-of-state absentees can be very motivated</strong>. A cash, creative, or
+        novation offer can be very appealing.
       </p>
       <div style="margin-top:1rem;display:grid;grid-template-columns:1fr 1fr;gap:0.6rem">
         <div style="background:rgba(96,165,250,0.08);border-radius:8px;padding:0.7rem 1rem">
@@ -605,7 +601,7 @@ elif st.session_state["list_type"] == "ao":
           <div style="font-size:0.82rem;color:rgba(242,239,230,0.6)">
             1. Download the CSV<br>
             2. Skip trace the owner using their mailing address<br>
-            3. Call and lead with convenience &amp; speed<br>
+            3. Use the cold call/warm lead script in scripts vault<br>
             4. Make a cash offer
           </div>
         </div>
@@ -613,8 +609,7 @@ elif st.session_state["list_type"] == "ao":
           <div style="font-size:0.78rem;font-weight:700;color:#60A5FA;margin-bottom:0.2rem">WHAT TO LOOK FOR</div>
           <div style="font-size:0.82rem;color:rgba(242,239,230,0.6)">
             • Out-of-state owners = highest motivation<br>
-            • Cross-ref with tax delinquent list<br>
-            • LLCs/corps already filtered out<br>
+            • LLCs/corps should already be filtered out<br>
             • Individual owners only
           </div>
         </div>
@@ -631,7 +626,7 @@ elif st.session_state["list_type"] == "ao":
         ao_count_n = database.get_ao_county_count(state, ao_county)
         st.markdown(
             f"<div class='eq-count-label'>"
-            f"<strong style='color:#60A5FA'>{ao_count_n:,}</strong> absentee owners — {ao_county} County, {state}"
+            f"<strong style='color:#60A5FA'>{ao_count_n:,}</strong> absentee owners in {ao_county} County, {state}"
             f"</div>",
             unsafe_allow_html=True
         )
@@ -649,15 +644,15 @@ elif st.session_state["list_type"] == "cv":
     <div style="background:rgba(20,184,166,0.06);border:1px solid rgba(20,184,166,0.2);
       border-left:4px solid #14B8A6;border-radius:12px;padding:1.4rem 1.6rem;margin-bottom:1.5rem">
       <div style="font-size:1rem;font-weight:800;color:#14B8A6;margin-bottom:0.8rem">
-        🚨 What is a Code Violations List?
+        What is a Code Violations List?
       </div>
       <p style="font-size:0.9rem;color:rgba(242,239,230,0.7);margin:0.3rem 0">
-        These are properties flagged by the city for open code enforcement cases — broken windows,
+        These are properties flagged by the city for open code enforcement cases. Broken windows,
         overgrown lots, structural damage, unpermitted work, or habitability issues.
       </p>
       <p style="font-size:0.9rem;color:rgba(242,239,230,0.7);margin:0.3rem 0">
         Owners sitting on unresolved violation notices are often <strong style="color:#F2EFE6">overwhelmed,
-        over-leveraged, or simply done</strong> with the property — a perfect target for a cash offer.
+        over-leveraged, or simply done</strong> with the property. A perfect target for a cash offer.
       </p>
       <div style="margin-top:1rem;display:grid;grid-template-columns:1fr 1fr;gap:0.6rem">
         <div style="background:rgba(20,184,166,0.08);border-radius:8px;padding:0.7rem 1rem">
@@ -666,7 +661,7 @@ elif st.session_state["list_type"] == "cv":
             1. Download the CSV<br>
             2. Look up the owner at the county assessor<br>
             3. Skip trace to get phone/email<br>
-            4. Call and make an offer
+            4. Call and use the cold call/warm lead script in scripts vault<br>
           </div>
         </div>
         <div style="background:rgba(20,184,166,0.08);border-radius:8px;padding:0.7rem 1rem">
@@ -675,7 +670,6 @@ elif st.session_state["list_type"] == "cv":
             • Multiple violations = more motivated<br>
             • Old filed dates = ignored for years<br>
             • Residential properties only<br>
-            • Cross-reference with tax delinquent list
           </div>
         </div>
       </div>
@@ -691,7 +685,7 @@ elif st.session_state["list_type"] == "cv":
         cv_count_n = database.get_cv_city_count(state, cv_city)
         st.markdown(
             f"<div class='eq-count-label'>"
-            f"<strong style='color:#14B8A6'>{cv_count_n:,}</strong> violation records — {cv_city}, {state}"
+            f"<strong style='color:#14B8A6'>{cv_count_n:,}</strong> violation records in {cv_city}, {state}"
             f"</div>",
             unsafe_allow_html=True
         )
@@ -707,7 +701,7 @@ elif st.session_state["list_type"] == "cv":
 st.markdown("""
 <div style="text-align:center;padding:3rem 0 1rem;border-top:1px solid rgba(201,168,76,0.08);margin-top:3rem;">
   <div style="font-size:0.75rem;color:rgba(242,239,230,0.13);letter-spacing:0.1em;text-transform:uppercase;">
-    © 2026 Equivest Academy LLC — Data sourced from public listings
+    © 2026 Equivest Academy LLC - Data sourced from public records and listings
   </div>
 </div>
 """, unsafe_allow_html=True)
