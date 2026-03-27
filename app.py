@@ -226,7 +226,6 @@ user_email = user["email"]
 CHUNK_SIZE = 10_000
 
 def _last_id(data: bytes) -> str | None:
-    """Extract the raw id string from the first column of the last CSV row."""
     lines = [l for l in data.splitlines() if l.strip()]
     if len(lines) < 2:
         return None
@@ -237,7 +236,6 @@ def _last_id(data: bytes) -> str | None:
         return None
 
 def _strip_id_col(data: bytes) -> bytes:
-    """Remove the leading id column from every CSV row."""
     out = []
     for line in data.splitlines(keepends=True):
         idx = line.find(b",")
@@ -248,68 +246,68 @@ def _download_buttons(count, filename_base, fetch_fn):
     """fetch_fn(after_id, limit) -> bytes  (id is first column)"""
     if not count:
         return
-    num_chunks = max(1, (count + CHUNK_SIZE - 1) // CHUNK_SIZE)
     sk = f"dl__{filename_base}"
+    ready_key  = f"{sk}__ready"
+    chunks_key = f"{sk}__chunks"
 
-    if num_chunks == 1:
-        ck = f"{sk}__0"
-        if ck in st.session_state:
+    if st.session_state.get(ready_key):
+        chunks = st.session_state[chunks_key]
+        if len(chunks) == 1:
             st.download_button(
                 label=f"⬇️  Download {count:,} Records as CSV",
-                data=st.session_state[ck],
+                data=chunks[0],
                 file_name=f"{filename_base}.csv",
                 mime="text/csv",
                 use_container_width=True,
-                key=f"{sk}__dlbtn_0",
+                key=f"{sk}__dl_0",
             )
         else:
-            if st.button(f"⬇️  Download {count:,} Records as CSV",
-                         key=f"{sk}__prep_0", use_container_width=True):
-                with st.spinner("Loading..."):
-                    raw = fetch_fn(None, CHUNK_SIZE)
-                if raw and len(raw.splitlines()) > 1:
-                    st.session_state[ck] = _strip_id_col(raw)
-                st.rerun()
-    else:
-        st.markdown(
-            f"<p style='font-size:0.85rem;color:rgba(242,239,230,0.45);margin-bottom:0.8rem'>"
-            f"{count:,} records — download each part in order</p>",
-            unsafe_allow_html=True,
-        )
-        cols = st.columns(4)
-        for i in range(num_chunks):
-            start  = i * CHUNK_SIZE + 1
-            end    = min((i + 1) * CHUNK_SIZE, count)
-            label  = f"Rows {start:,}–{end:,}"
-            ck     = f"{sk}__data_{i}"
-            cur_ck = f"{sk}__cursor_{i}"   # after_id to pass when fetching chunk i
-
-            with cols[i % 4]:
-                if ck in st.session_state:
+            st.markdown(
+                f"<p style='font-size:0.85rem;color:rgba(242,239,230,0.45);margin-bottom:0.8rem'>"
+                f"Ready — {len(chunks)} files of up to {CHUNK_SIZE:,} rows each</p>",
+                unsafe_allow_html=True,
+            )
+            cols = st.columns(4)
+            for i, chunk in enumerate(chunks):
+                start = i * CHUNK_SIZE + 1
+                end   = min((i + 1) * CHUNK_SIZE, count)
+                with cols[i % 4]:
                     st.download_button(
-                        label=f"⬇️  {label}",
-                        data=st.session_state[ck],
+                        label=f"⬇️  Rows {start:,}–{end:,}",
+                        data=chunk,
                         file_name=f"{filename_base}_part{i+1}.csv",
                         mime="text/csv",
                         use_container_width=True,
-                        key=f"{sk}__dlbtn_{i}",
+                        key=f"{sk}__dl_{i}",
                     )
-                else:
-                    # Chunk 0 is always available; later chunks unlock after the previous one
-                    can_fetch = (i == 0) or (cur_ck in st.session_state)
-                    if st.button(label, key=f"{sk}__prep_{i}",
-                                 use_container_width=True,
-                                 disabled=not can_fetch):
-                        # cur_ck holds the after_id string (or is absent for chunk 0)
-                        after_id = st.session_state.get(cur_ck, None)
-                        with st.spinner(f"Loading {label}..."):
-                            raw = fetch_fn(after_id, CHUNK_SIZE)
-                        if raw and len(raw.splitlines()) > 1:
-                            next_id = _last_id(raw)
-                            if next_id:
-                                st.session_state[f"{sk}__cursor_{i+1}"] = next_id
-                            st.session_state[ck] = _strip_id_col(raw)
-                        st.rerun()
+    else:
+        est = max(1, (count + CHUNK_SIZE - 1) // CHUNK_SIZE)
+        if st.button(
+            f"⬇️  Prepare Download — {count:,} Records",
+            key=f"{sk}__go", use_container_width=True
+        ):
+            chunks   = []
+            after_id = None
+            bar      = st.progress(0, text="Starting…")
+            while True:
+                raw = fetch_fn(after_id, CHUNK_SIZE)
+                if not raw:
+                    break
+                data_lines = raw.splitlines()[1:]   # drop header
+                if not data_lines:
+                    break
+                after_id = _last_id(raw)
+                chunks.append(_strip_id_col(raw))
+                pct     = min(len(chunks) / est, 1.0)
+                fetched = min(len(chunks) * CHUNK_SIZE, count)
+                bar.progress(pct, text=f"Fetched {fetched:,} of ~{count:,} records…")
+                if len(data_lines) < CHUNK_SIZE or after_id is None:
+                    break
+            bar.empty()
+            if chunks:
+                st.session_state[chunks_key] = chunks
+                st.session_state[ready_key]  = True
+            st.rerun()
 
 
 # ── Header ─────────────────────────────────────────────────────────────────────
