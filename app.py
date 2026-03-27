@@ -136,15 +136,61 @@ html, body, .stApp {
   border-radius:10px !important; color:#F2EFE6 !important; font-size:1rem !important; }
 .stTextInput input { background:#0f1120 !important; border:2px solid rgba(201,168,76,0.25) !important;
   border-radius:10px !important; color:#F2EFE6 !important; font-size:1rem !important; padding:0.6rem 0.9rem !important; }
+
+/* Action buttons (gold) */
 .stButton > button { background:linear-gradient(135deg,#C9A84C,#E8D070) !important;
   color:#080a14 !important; font-family:'Outfit',sans-serif !important; font-weight:800 !important;
-  font-size:0.95rem !important; border:none !important; border-radius:10px !important;
-  padding:0.6rem 1.5rem !important; }
+  font-size:1rem !important; border:none !important; border-radius:10px !important;
+  padding:0.7rem 1.5rem !important; letter-spacing:0.02em !important; }
 .stButton > button:hover { opacity:0.87 !important; }
+.stButton > button:disabled { background:#1e2130 !important; color:rgba(242,239,230,0.2) !important;
+  cursor:not-allowed !important; }
+
+/* Download buttons — dark card with red text */
+[data-testid="stDownloadButton"] > button {
+  background:#1a1a2e !important;
+  color:#ff4d4d !important;
+  border:1.5px solid rgba(255,77,77,0.4) !important;
+  font-family:'Outfit',sans-serif !important;
+  font-weight:700 !important;
+  font-size:0.95rem !important;
+  border-radius:10px !important;
+  padding:0.7rem 1rem !important;
+  letter-spacing:0.01em !important;
+  box-shadow:0 0 12px rgba(255,77,77,0.12) !important;
+}
+[data-testid="stDownloadButton"] > button:hover {
+  background:#22223a !important;
+  border-color:rgba(255,77,77,0.7) !important;
+  box-shadow:0 0 18px rgba(255,77,77,0.25) !important;
+}
+
+/* Spinner / loading */
+.stSpinner > div { border-top-color:#C9A84C !important; }
+[data-testid="stSpinner"] p,
+.stSpinner p {
+  color:#C9A84C !important;
+  font-family:'Outfit',sans-serif !important;
+  font-size:1rem !important;
+  font-weight:600 !important;
+  letter-spacing:0.04em !important;
+}
+
 label { color:rgba(242,239,230,0.7) !important; font-size:0.9rem !important;
   font-weight:600 !important; letter-spacing:0.03em !important; }
 div[data-testid="stMetricValue"] { font-size:2rem !important; font-weight:900 !important; color:#F2EFE6 !important; }
 div[data-testid="stMetricLabel"] { font-size:0.85rem !important; color:rgba(242,239,230,0.5) !important; }
+
+/* Section dividers */
+.eq-section-header {
+  font-size:1.3rem; font-weight:800; color:#F2EFE6;
+  letter-spacing:0.01em; margin:2rem 0 1rem;
+  border-left:3px solid #C9A84C; padding-left:0.75rem;
+}
+.eq-count-label {
+  font-size:1.1rem; color:rgba(242,239,230,0.55); margin:0.4rem 0 1rem;
+}
+.eq-count-label strong { font-size:1.6rem; font-weight:900; }
 
 /* ── Kill ALL Streamlit rerun fades / transitions ── */
 [data-testid="stStatusWidget"] { display:none !important; }
@@ -154,9 +200,16 @@ div[data-testid="stMetricLabel"] { font-size:0.85rem !important; color:rgba(242,
   transition-duration: 0s !important;
   transition-delay: 0s !important;
 }
-/* Re-allow our intentional UI transitions */
+/* Re-allow spinner and intentional transitions */
+.stSpinner > div,
+[data-testid="stSpinner"] svg,
+[data-testid="stSpinner"] * {
+  animation-duration: 0.8s !important;
+  animation-delay: 0s !important;
+}
 .toggle-btn { transition-duration: 0.2s !important; }
 .stButton > button { transition-duration: 0.15s !important; }
+[data-testid="stDownloadButton"] > button { transition-duration: 0.15s !important; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -452,11 +505,9 @@ if st.session_state["list_type"] == "fsbo":
                     unsafe_allow_html=True)
     else:
         st.markdown(
-            f"<p style='color:rgba(242,239,230,0.5);font-size:0.95rem;margin:0.5rem 0 0.3rem'>"
-            f"<strong style='color:#C9A84C;font-size:1.4rem'>{fsbo_count:,}</strong>"
-            f"  active listings — {state}</p>"
-            f"<p style='font-size:0.78rem;color:rgba(242,239,230,0.25);margin:0 0 1rem'>"
-            f"On Mac: right-click → Open With → Excel or Google Sheets to avoid Numbers.</p>",
+            f"<div class='eq-count-label'>"
+            f"<strong style='color:#C9A84C'>{fsbo_count:,}</strong> active listings — {state}"
+            f"</div>",
             unsafe_allow_html=True
         )
         _download_buttons(
@@ -518,11 +569,9 @@ elif st.session_state["list_type"] == "td":
         td_county  = st.selectbox("Select County", td_counties, key="td_county_select")
         td_count_n = database.get_td_county_count(state, td_county)
         st.markdown(
-            f"<p style='color:rgba(242,239,230,0.5);font-size:0.95rem;margin:0.5rem 0 0.3rem'>"
-            f"<strong style='color:#e05555;font-size:1.4rem'>{td_count_n:,}</strong>"
-            f"  individual owner records — {td_county} County, {state}</p>"
-            f"<p style='font-size:0.78rem;color:rgba(242,239,230,0.25);margin:0 0 1rem'>"
-            f"On Mac: right-click → Open With → Excel or Google Sheets to avoid Numbers.</p>",
+            f"<div class='eq-count-label'>"
+            f"<strong style='color:#e05555'>{td_count_n:,}</strong> individual owners — {td_county} County, {state}"
+            f"</div>",
             unsafe_allow_html=True
         )
         if td_count_n:
@@ -581,11 +630,9 @@ elif st.session_state["list_type"] == "ao":
         ao_county  = st.selectbox("Select County", ao_counties, key="ao_county_select")
         ao_count_n = database.get_ao_county_count(state, ao_county)
         st.markdown(
-            f"<p style='color:rgba(242,239,230,0.5);font-size:0.95rem;margin:0.5rem 0 0.3rem'>"
-            f"<strong style='color:#60A5FA;font-size:1.4rem'>{ao_count_n:,}</strong>"
-            f"  absentee owner records — {ao_county} County, {state}</p>"
-            f"<p style='font-size:0.78rem;color:rgba(242,239,230,0.25);margin:0 0 1rem'>"
-            f"On Mac: right-click → Open With → Excel or Google Sheets to avoid Numbers.</p>",
+            f"<div class='eq-count-label'>"
+            f"<strong style='color:#60A5FA'>{ao_count_n:,}</strong> absentee owners — {ao_county} County, {state}"
+            f"</div>",
             unsafe_allow_html=True
         )
         if ao_count_n:
@@ -643,11 +690,9 @@ elif st.session_state["list_type"] == "cv":
         cv_city    = st.selectbox("Select City", cv_cities, key="cv_city_select")
         cv_count_n = database.get_cv_city_count(state, cv_city)
         st.markdown(
-            f"<p style='color:rgba(242,239,230,0.5);font-size:0.95rem;margin:0.5rem 0 0.3rem'>"
-            f"<strong style='color:#14B8A6;font-size:1.4rem'>{cv_count_n:,}</strong>"
-            f"  active violation records — {cv_city}, {state}</p>"
-            f"<p style='font-size:0.78rem;color:rgba(242,239,230,0.25);margin:0 0 1rem'>"
-            f"On Mac: right-click → Open With → Excel or Google Sheets to avoid Numbers.</p>",
+            f"<div class='eq-count-label'>"
+            f"<strong style='color:#14B8A6'>{cv_count_n:,}</strong> violation records — {cv_city}, {state}"
+            f"</div>",
             unsafe_allow_html=True
         )
         if cv_count_n:
