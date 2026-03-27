@@ -498,11 +498,7 @@ if st.session_state["list_type"] == "fsbo":
       </div>
     </div>""", unsafe_allow_html=True)
 
-    if not fsbo_count:
-        st.markdown('<div class="no-results">No active FSBO listings for this state.<br>'
-                    '<span style="font-size:0.85rem">Check back soon — we scrape daily.</span></div>',
-                    unsafe_allow_html=True)
-    else:
+    if fsbo_count:
         st.markdown(
             f"<div class='eq-count-label'>"
             f"<strong style='color:#C9A84C'>{fsbo_count:,}</strong> active in {state}"
@@ -515,8 +511,6 @@ if st.session_state["list_type"] == "fsbo":
             lambda aid, lim: database.get_fsbo_leads_for_download(state, limit=lim, after_id=aid),
         )
 
-    st.markdown("<p style='text-align:center;font-size:0.82rem;color:rgba(242,239,230,0.18);margin-top:2rem'>"
-                "Don't see your state? More markets coming soon!</p>", unsafe_allow_html=True)
 
 
 # ── Tax Delinquent ─────────────────────────────────────────────────────────────
