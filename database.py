@@ -308,7 +308,20 @@ def get_td_counties(state: str) -> list[str]:
         return []
 
 def get_td_county_count(state: str, county: str) -> int:
-    return _count_by("tax_delinquent_leads", state=state, county=county)
+    try:
+        resp = (
+            _admin()
+            .table("tax_delinquent_leads")
+            .select("id", count="exact")
+            .eq("state", state)
+            .eq("county", county)
+            .neq("owner_name", "")
+            .neq("property_address", "")
+            .execute()
+        )
+        return resp.count or 0
+    except Exception:
+        return 0
 
 def get_td_leads_for_download(state: str, county: str, limit: int = 500_000, offset: int = 0) -> bytes:
     """CSV bytes — TD records for state/county with optional chunking."""
@@ -408,7 +421,20 @@ def get_ao_counties(state: str) -> list[str]:
         return []
 
 def get_ao_county_count(state: str, county: str) -> int:
-    return _count_by("absentee_owner_leads", state=state, county=county)
+    try:
+        resp = (
+            _admin()
+            .table("absentee_owner_leads")
+            .select("id", count="exact")
+            .eq("state", state)
+            .eq("county", county)
+            .neq("owner_name", "")
+            .neq("property_address", "")
+            .execute()
+        )
+        return resp.count or 0
+    except Exception:
+        return 0
 
 def get_ao_leads_for_download(state: str, county: str, limit: int = 500_000, offset: int = 0) -> bytes:
     """CSV bytes — AO records for state/county with optional chunking."""
@@ -463,7 +489,19 @@ def get_cv_cities(state: str) -> list[str]:
         return []
 
 def get_cv_city_count(state: str, city: str) -> int:
-    return _count_by("code_violation_leads", state=state, city=city)
+    try:
+        resp = (
+            _admin()
+            .table("code_violation_leads")
+            .select("id", count="exact")
+            .eq("state", state)
+            .eq("city", city)
+            .neq("address", "")
+            .execute()
+        )
+        return resp.count or 0
+    except Exception:
+        return 0
 
 def get_cv_leads_for_download(state: str, city: str, limit: int = 500_000, offset: int = 0) -> bytes:
     """CSV bytes — CV records for state/city with optional chunking."""

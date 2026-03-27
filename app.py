@@ -263,19 +263,31 @@ def _download_buttons(count, filename_base, fetch_fn):
             ck     = f"{sk}__{i}"
             with cols[i % 4]:
                 if ck in st.session_state:
-                    st.download_button(
-                        label=f"⬇️  {label}",
-                        data=st.session_state[ck],
-                        file_name=f"{filename_base}_part{i+1}.csv",
-                        mime="text/csv",
-                        use_container_width=True,
-                        key=f"{sk}__dlbtn_{i}",
-                    )
+                    if st.session_state[ck]:
+                        st.download_button(
+                            label=f"⬇️  {label}",
+                            data=st.session_state[ck],
+                            file_name=f"{filename_base}_part{i+1}.csv",
+                            mime="text/csv",
+                            use_container_width=True,
+                            key=f"{sk}__dlbtn_{i}",
+                        )
+                    else:
+                        st.markdown(
+                            "<div style='text-align:center;font-size:0.75rem;"
+                            "color:rgba(242,239,230,0.3);padding:0.5rem'>end of list</div>",
+                            unsafe_allow_html=True,
+                        )
                 else:
                     if st.button(label, key=f"{sk}__prep_{i}",
                                  use_container_width=True):
                         with st.spinner(f"Loading {label}..."):
-                            st.session_state[ck] = fetch_fn(offset, CHUNK_SIZE)
+                            raw = fetch_fn(offset, CHUNK_SIZE)
+                        # Only store if there are actual data rows (not just a header)
+                        if raw and len(raw.splitlines()) > 1:
+                            st.session_state[ck] = raw
+                        else:
+                            st.session_state[ck] = None
                         st.rerun()
 
 
