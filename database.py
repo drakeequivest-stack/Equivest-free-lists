@@ -153,19 +153,11 @@ def sign_up(email: str, password: str) -> tuple[dict | None, str]:
 
 @st.cache_data(ttl=_TTL)
 def get_fsbo_count(state: str) -> int:
-    try:
-        now = datetime.now(timezone.utc).isoformat()
-        resp = (
-            _admin()
-            .table("fsbo_leads")
-            .select("id", count="exact")
-            .eq("state", state)
-            .gt("expires_at", now)
-            .execute()
-        )
-        return resp.count or 0
-    except Exception:
-        return 0
+    now = datetime.now(timezone.utc).isoformat()
+    return _count_from_filters("fsbo_leads", [
+        ("state",      f"eq.{state}"),
+        ("expires_at", f"gt.{now}"),
+    ])
 
 def get_fsbo_leads_for_download(state: str, limit: int = 10_000, after_id: str | None = None) -> bytes:
     """CSV bytes — active FSBO leads for state, cursor-paginated by id."""
@@ -289,20 +281,13 @@ def claim_lead(lead_id: str, user_id: str, user_email: str, hours: int = 48) -> 
 
 @st.cache_data(ttl=_TTL)
 def get_td_lead_count(state: str) -> int:
-    """Count active tax delinquent leads for a state."""
-    try:
-        now = datetime.now(timezone.utc).isoformat()
-        resp = (
-            _admin()
-            .table("tax_delinquent_leads")
-            .select("id", count="exact")
-            .eq("state", state)
-            .or_(f"expires_at.gt.{now},expires_at.is.null")
-            .execute()
-        )
-        return resp.count or 0
-    except Exception:
-        return 0
+    now = datetime.now(timezone.utc).isoformat()
+    return _count_from_filters("tax_delinquent_leads", [
+        ("state",            f"eq.{state}"),
+        ("owner_name",       "neq."),
+        ("property_address", "neq."),
+        ("or",               f"(expires_at.gt.{now},expires_at.is.null)"),
+    ] + _ENTITY_FILTERS)
 
 def get_td_leads(state: str, user_id: str) -> list[dict]:
     """Get active tax delinquent leads for a state with claim status."""
@@ -442,17 +427,11 @@ def get_my_td_claims(user_id: str) -> list[dict]:
 
 @st.cache_data(ttl=_TTL)
 def get_ao_lead_count(state: str) -> int:
-    try:
-        resp = (
-            _admin()
-            .table("absentee_owner_leads")
-            .select("id", count="exact")
-            .eq("state", state)
-            .execute()
-        )
-        return resp.count or 0
-    except Exception:
-        return 0
+    return _count_from_filters("absentee_owner_leads", [
+        ("state",            f"eq.{state}"),
+        ("owner_name",       "neq."),
+        ("property_address", "neq."),
+    ] + _ENTITY_FILTERS)
 
 @st.cache_data(ttl=_TTL)
 def get_ao_counties(state: str) -> list[str]:
@@ -509,17 +488,10 @@ def get_ao_leads_for_download(state: str, county: str, limit: int = 10_000, afte
 
 @st.cache_data(ttl=_TTL)
 def get_cv_lead_count(state: str) -> int:
-    try:
-        resp = (
-            _admin()
-            .table("code_violation_leads")
-            .select("id", count="exact")
-            .eq("state", state)
-            .execute()
-        )
-        return resp.count or 0
-    except Exception:
-        return 0
+    return _count_from_filters("code_violation_leads", [
+        ("state",   f"eq.{state}"),
+        ("address", "neq."),
+    ])
 
 @st.cache_data(ttl=_TTL)
 def get_cv_cities(state: str) -> list[str]:
