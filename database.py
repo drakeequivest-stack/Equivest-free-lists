@@ -26,6 +26,9 @@ import requests as _http
 from supabase import create_client, Client
 from datetime import datetime, timezone
 
+# Cache TTL: counts / lists refresh every 10 minutes
+_TTL = 600
+
 def _admin() -> Client:
     return create_client(st.secrets["SUPABASE_URL"], st.secrets["SUPABASE_SERVICE_KEY"])
 
@@ -121,6 +124,7 @@ def sign_up(email: str, password: str) -> tuple[dict | None, str]:
 
 # ── Leads ─────────────────────────────────────────────────────────────────────
 
+@st.cache_data(ttl=_TTL)
 def get_fsbo_count(state: str) -> int:
     try:
         now = datetime.now(timezone.utc).isoformat()
@@ -256,6 +260,7 @@ def claim_lead(lead_id: str, user_id: str, user_email: str, hours: int = 48) -> 
 
 # ── Tax Delinquent Leads ───────────────────────────────────────────────────────
 
+@st.cache_data(ttl=_TTL)
 def get_td_lead_count(state: str) -> int:
     """Count active tax delinquent leads for a state."""
     try:
@@ -309,6 +314,7 @@ def get_td_leads(state: str, user_id: str) -> list[dict]:
         print(f"[DB] get_td_leads error: {e}")
         return []
 
+@st.cache_data(ttl=_TTL)
 def get_td_counties(state: str) -> list[str]:
     """Get list of counties with TD data for a state."""
     try:
@@ -330,6 +336,7 @@ def get_td_counties(state: str) -> list[str]:
     except Exception:
         return []
 
+@st.cache_data(ttl=_TTL)
 def get_td_county_count(state: str, county: str) -> int:
     try:
         q = (
@@ -416,6 +423,7 @@ def get_my_td_claims(user_id: str) -> list[dict]:
 
 # ── Absentee Owner Leads ───────────────────────────────────────────────────────
 
+@st.cache_data(ttl=_TTL)
 def get_ao_lead_count(state: str) -> int:
     try:
         resp = (
@@ -429,6 +437,7 @@ def get_ao_lead_count(state: str) -> int:
     except Exception:
         return 0
 
+@st.cache_data(ttl=_TTL)
 def get_ao_counties(state: str) -> list[str]:
     try:
         resp = (
@@ -449,6 +458,7 @@ def get_ao_counties(state: str) -> list[str]:
     except Exception:
         return []
 
+@st.cache_data(ttl=_TTL)
 def get_ao_county_count(state: str, county: str) -> int:
     try:
         q = (
@@ -490,6 +500,7 @@ def get_ao_leads_for_download(state: str, county: str, limit: int = 10_000, afte
 
 # ── Code Violation Leads ───────────────────────────────────────────────────────
 
+@st.cache_data(ttl=_TTL)
 def get_cv_lead_count(state: str) -> int:
     try:
         resp = (
@@ -503,6 +514,7 @@ def get_cv_lead_count(state: str) -> int:
     except Exception:
         return 0
 
+@st.cache_data(ttl=_TTL)
 def get_cv_cities(state: str) -> list[str]:
     try:
         resp = (
@@ -523,6 +535,7 @@ def get_cv_cities(state: str) -> list[str]:
     except Exception:
         return []
 
+@st.cache_data(ttl=_TTL)
 def get_cv_city_count(state: str, city: str) -> int:
     try:
         resp = (
@@ -557,6 +570,7 @@ def get_cv_leads_for_download(state: str, city: str, limit: int = 10_000, after_
     )
 
 
+@st.cache_data(ttl=_TTL)
 def get_last_scraped(state: str) -> str | None:
     try:
         resp = (
